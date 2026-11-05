@@ -196,7 +196,13 @@ Add rows here when the agent writes a question in `docs/OPEN_QUESTIONS.md`.
 
 | Package or tool | Exact version | Verified exists (command + date) | Reason | Ref id |
 |---|---|---|---|---|
-| node | | | | |
+| node | 22.11.0 | `node --version` (10/30) | Runtime | — |
+| next | 16.4.3 | repo manifest / lockfile (10/30) | App framework (create-next-app template) | — |
+| react / react-dom | 19.3.0 | repo manifest / lockfile (10/30) | UI runtime | — |
+| tailwindcss | 4.3.3 | lockfile (10/30) | Styling (v4, `@import "tailwindcss"`) | — |
+| typescript | 5.9.3 | lockfile (10/30) | Language | — |
+| gsap | 3.15.0 | `npm view gsap version` (10/30) | ScrollTrigger pinned landing scroll story (landing page task) | — |
+| framer-motion | 14.9.0 | `npm view framer-motion version` (10/30) | Landing text crossfade / entrance motion | — |
 | pnpm | | | | |
 | foundry (forge) | | | | |
 | viem | | | | |

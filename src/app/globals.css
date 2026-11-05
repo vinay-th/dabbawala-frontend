@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
+/* Design tokens from DESIGN.md / ref/landing.html ("Bombay Ledger & Rail") */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --chai-paper: #f2eadb;
+  --paper-shade: #e6dbc3;
+  --kaali-ink: #14110f;
+  --peeli-yellow: #ffc20e;
+  --signal-green: #1f7a4d;
+  --best-red: #d7261e;
+  --monsoon-slate: #1d2a30;
+  --tiffin-steel: #c9cccb;
+
+  /* Horizon pan, driven by scroll progress from page.tsx */
+  --horizon-pan: 0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-display: "Instrument Serif", ui-serif, serif;
+  --font-barlow: "Barlow Condensed", ui-sans-serif, sans-serif;
+  --font-tiro: "Tiro Devanagari Marathi", ui-serif, serif;
+  --color-chai: #f2eadb;
+  --color-paper-shade: #e6dbc3;
+  --color-ink: #14110f;
+  --color-peeli: #ffc20e;
+  --color-signal: #1f7a4d;
+  --color-best-red: #d7261e;
+  --color-slate-monsoon: #1d2a30;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--chai-paper);
+  color: var(--kaali-ink);
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--peeli-yellow);
+  color: #000;
+}
+
+/* Frame themes — paper warming to golden hour to monsoon slate (ref/landing.html) */
+body.theme-f0 { background-color: #f3ebdd; color: #14110f; }
+body.theme-f1 { background-color: #efe4d2; color: #14110f; }
+body.theme-f2 { background-color: #ebddc6; color: #14110f; }
+body.theme-f3 { background-color: #e5d5bd; color: #14110f; }
+body.theme-f4 { background-color: #dccbb1; color: #14110f; }
+body.theme-f5 { background-color: #1a252a; color: #f2eadb; }
+body.theme-f6 { background-color: #111a1e; color: #f2eadb; }
+
+/* Primary button: hard offset shadow, presses flat on click */
+.btn-shadow {
+  box-shadow: 2.5px 2.5px 0 var(--kaali-ink);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-shadow:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3.5px 3.5px 0 var(--kaali-ink);
+}
+.btn-shadow:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--kaali-ink);
+}
+body.theme-f5 .btn-shadow,
+body.theme-f6 .btn-shadow {
+  box-shadow: 2.5px 2.5px 0 #000;
+}
+
+/* Western Railway EMU local gliding across the backdrop */
+@keyframes glideTrain {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
