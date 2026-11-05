@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dabbawala Protocol — Pinned Tiffin Scroll Story</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&amp;family=Geist+Mono:wght@400;500;600&amp;family=Geist:wght@300;400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;family=Tiro+Devanagari+Marathi:ital@0;1&amp;display=swap" rel="stylesheet"/>
+<style>
+    :root {
+      --chai-paper: #F2EADB;
+      --paper-shade: #E6DBC3;
+      --kaali-ink: #14110F;
+      --peeli-yellow: #FFC20E;
+      --signal-green: #1F7A4D;
+      --best-red: #D7261E;
+      --monsoon-slate: #1D2A30;
+      --tiffin-steel: #C9CCCB;
+      --tiffin-steel-dark: #A9ACAB;
+    }
+
+    body {
+      background-color: var(--chai-paper);
+      color: var(--kaali-ink);
+      font-family: 'Geist', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .font-serif-display { font-family: 'Instrument Serif', serif; }
+    .font-mono-code { font-family: 'Geist Mono', monospace; }
+    .font-barlow-caps { font-family: 'Barlow Condensed', sans-serif; }
+    .font-marathi { font-family: 'Tiro Devanagari Marathi', serif; }
+
+    /* Frame themes */
+    body.theme-f0 { background-color: #F3EBDD; color: #14110F; }
+    body.theme-f1 { background-color: #EFE4D2; color: #14110F; }
+    body.theme-f2 { background-color: #EBDDC6; color: #14110F; }
+    body.theme-f3 { background-color: #E5D5BD; color: #14110F; }
+    body.theme-f4 { background-color: #DCCBB1; color: #14110F; }
+    body.theme-f5 { background-color: #1A252A; color: #F2EADB; }
+    body.theme-f6 { background-color: #111A1E; color: #F2EADB; }
+
+    /* Button hard shadow */
+    .btn-shadow {
+      box-shadow: 2.5px 2.5px 0px var(--kaali-ink);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-shadow:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3.5px 3.5px 0px var(--kaali-ink);
+    }
+    .btn-shadow:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px var(--kaali-ink);
+    }
+    body.theme-f5 .btn-shadow, body.theme-f6 .btn-shadow {
+      box-shadow: 2.5px 2.5px 0px #000;
+    }
+
+    /* Red Stamp */
+    .stamp-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      border: 1.5px solid var(--best-red);
+      color: var(--best-red);
+      padding: 1px 7px;
+      transform: rotate(-3deg);
+      border-radius: 2px;
+    }
+
+    .proof-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      border: 1.5px solid var(--peeli-yellow);
+      color: var(--peeli-yellow);
+      padding: 1px 7px;
+      transform: rotate(-1deg);
+      border-radius: 2px;
+    }
+
+    /* Outline Numbers */
+    .outline-numeral {
+      -webkit-text-stroke: 1.5px currentColor;
+      color: transparent;
+      opacity: 0.14;
+      line-height: 0.8;
+      user-select: none;
+    }
+
+    /* Rail Progress Indicators */
+    .rail-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: 1.5px solid currentColor;
+      transition: all 0.25s ease;
+    }
+    .rail-dot.active {
+      background-color: var(--peeli-yellow);
+      border-color: var(--peeli-yellow);
+      box-shadow: 0 0 0 3px rgba(255, 194, 14, 0.35);
+    }
+
+    /* Train animation */
+    @keyframes glideTrain {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100vw); }
+    }
+    .animate-train {
+      animation: glideTrain 32s linear infinite;
+    }
+
+    /* Tiffin Tier Transforms */
+    .tiffin-tier {
+      transition: transform 0.5s cubic-bezier(0.2, 0.85, 0.3, 1), opacity 0.4s ease;
+    }
+    .tier-lifted {
+      transform: translate(-18px, -92px) rotate(-3.5deg);
+      opacity: 0.15 !important;
+      pointer-events: none;
+    }
+    .tier-lifted-far {
+      transform: translate(-30px, -155px) rotate(-6deg);
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+    .tier-active {
+      transform: translate(14px, 0px);
+    }
+
+    /* Blueprint Surveyor grid */
+    .blueprint-grid {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, currentColor 1px, transparent 1px),
+        linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="theme-f0 selection:bg-[#FFC20E] selection:text-black relative">
+<!-- ================= VINTAGE MUMBAI RAILWAY & ARCHITECTURAL BACKDROP ================= -->
+<div aria-hidden="true" class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+<!-- 1. Technical Ledger / Surveyor Grid overlay (Ultra subtle 3-4% opacity) -->
+<div class="absolute inset-0 blueprint-grid opacity-[0.035]"></div>
+<!-- 2. Ledger Coordinates, Station Mileages & Perforated Ticket Margins -->
+<div class="absolute top-20 left-12 font-mono-code text-[10px] tracking-widest opacity-25 uppercase flex flex-col gap-1">
+<span>SURVEY PLAT 1890-B · WESTERN DIVISION</span>
+<span>BOMBAY CENTRAL ↔ CHURCHGATE ↔ ANDHERI [KM 18.4]</span>
+<span>GAUGE: BROAD 1676MM · CADASTRE SHEET #04</span>
+</div>
+<div class="absolute top-20 right-12 font-mono-code text-[10px] tracking-widest opacity-25 uppercase text-right flex flex-col gap-1">
+<span>LAT 18°55'48" N · LON 72°49'38" E</span>
+<span>DAILY TIFFIN SORT RUN: 200,000 DABBIS</span>
+<span>SIGMA SIX ERROR MARGIN: 1 IN 16,000,000</span>
+</div>
+<!-- Vintage Red Ticket Examiner Stamp Top-Right -->
+<div class="absolute top-24 right-48 pointer-events-none opacity-20 hidden xl:block select-none rotate-6">
+<div class="w-24 h-24 rounded-full border-2 border-[#D7261E] border-dashed p-1 flex items-center justify-center text-center">
+<div class="w-full h-full rounded-full border border-[#D7261E] flex flex-col items-center justify-center p-1 text-[#D7261E] font-barlow-caps leading-none">
+<span class="text-[8px] tracking-widest font-extrabold uppercase">WESTERN RAILWAY</span>
+<span class="text-[11px] font-black my-0.5">COLABA</span>
+<span class="text-[8px] font-bold">14 APR 1890</span>
+<span class="text-[7px] tracking-tighter uppercase opacity-80">VERIFIED AUTH</span>
+</div>
+</div>
+</div>
+<!-- Circular Dabbawala Quality Seal Mid-Left -->
+<div class="absolute bottom-28 left-16 pointer-events-none opacity-15 hidden xl:block select-none -rotate-12">
+<div class="w-20 h-20 rounded-full border-2 border-current p-1 flex items-center justify-center text-center">
+<div class="w-full h-full rounded-full border border-current flex flex-col items-center justify-center text-current font-barlow-caps leading-none">
+<span class="text-[8px] font-extrabold uppercase">TRUST PROTOCOL</span>
+<span class="font-marathi text-[10px] my-0.5 font-bold">डबेवाले</span>
+<span class="text-[7px] font-mono-code tracking-widest">ZERO-FAIL</span>
+</div>
+</div>
+</div>
+<!-- Monsoon Diagonal Micro-Rain Hachures (Top right atmospheric wash) -->
+<svg class="absolute top-0 right-0 w-96 h-80 opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="24" id="monsoon-rain" patterntransform="rotate(30)" patternunits="userSpaceOnUse" width="24">
+<line stroke="currentColor" stroke-dasharray="1 5" stroke-width="0.85" x1="0" x2="0" y1="0" y2="8"></line>
+</pattern>
+</defs>
+<rect fill="url(#monsoon-rain)" height="100%" width="100%"></rect>
+</svg>
+<!-- Compass Rose / Rail Telegraph Alignment Mark (Top center) -->
+<div class="absolute top-6 left-1/2 -translate-x-1/2 opacity-15 flex items-center gap-3">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.2" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<line x1="12" x2="12" y1="1" y2="23"></line>
+<line x1="1" x2="23" y1="12" y2="12"></line>
+<circle cx="12" cy="12" fill="currentColor" r="2"></circle>
+</svg>
+<span class="font-mono-code text-[9px] tracking-widest uppercase">SECTION LINE 12-W</span>
+</div>
+<!-- 3. Mumbai Skyline & Western Railway Line Art across lower horizon -->
+<svg class="absolute bottom-4 w-full h-56 opacity-[0.09] transition-opacity duration-700" fill="none" preserveaspectratio="xMidYMax meet" viewbox="0 0 1440 220">
+<!-- Queen's Necklace Promenade curve with old Victorian street lanterns -->
+<path d="M -20 195 Q 260 180 540 195 T 1060 190 T 1480 195" stroke="currentColor" stroke-dasharray="4 6" stroke-width="1.4"></path>
+<!-- Vintage Promenade Cast-Iron Lamp Posts -->
+<g stroke="currentColor" stroke-width="1">
+<line x1="120" x2="120" y1="190" y2="160"></line><circle cx="120" cy="158" r="2"></circle>
+<line x1="280" x2="280" y1="184" y2="154"></line><circle cx="280" cy="152" r="2"></circle>
+<line x1="440" x2="440" y1="188" y2="158"></line><circle cx="440" cy="156" r="2"></circle>
+<line x1="600" x2="600" y1="192" y2="162"></line><circle cx="600" cy="160" r="2"></circle>
+<line x1="760" x2="760" y1="190" y2="160"></line><circle cx="760" cy="158" r="2"></circle>
+<line x1="920" x2="920" y1="188" y2="158"></line><circle cx="920" cy="156" r="2"></circle>
+<line x1="1080" x2="1080" y1="190" y2="160"></line><circle cx="1080" cy="158" r="2"></circle>
+<line x1="1240" x2="1240" y1="192" y2="162"></line><circle cx="1240" cy="160" r="2"></circle>
+</g>
+<!-- CST / Churchgate Victorian Gothic Railway Arches & Central Turrets -->
+<g stroke="currentColor" stroke-width="1.3">
+<!-- Arches left -->
+<path d="M 40 195 L 40 160 Q 55 145 70 160 L 70 195"></path>
+<path d="M 70 195 L 70 160 Q 85 145 100 160 L 100 195"></path>
+<path d="M 100 195 L 100 155 L 110 140 L 120 155 L 120 195"></path>
+<!-- Gateway of India Iconic Basalt Monument Center-Left -->
+<path d="M 330 195 L 330 135 L 338 135 L 338 115 L 350 115 L 350 135 L 380 135 L 380 115 L 392 115 L 392 135 L 400 135 L 400 195 Z"></path>
+<!-- Central Gateway Arch & side arches -->
+<path d="M 352 195 L 352 145 Q 365 133 378 145 L 378 195 Z"></path>
+<path d="M 336 195 L 336 160 Q 342 152 348 160 L 348 195"></path>
+<path d="M 382 195 L 382 160 Q 388 152 394 160 L 394 195"></path>
+<circle cx="365" cy="125" r="4.5"></circle>
+<!-- Rajabai Clock Tower Gothic Spire (Height 280ft architectural scale) -->
+<path d="M 480 195 L 480 130 L 486 130 L 486 95 L 490 70 L 494 95 L 494 130 L 500 130 L 500 195 Z"></path>
+<circle cx="490" cy="115" r="3.5"></circle>
+<line x1="486" x2="494" y1="145" y2="145"></line>
+<line x1="486" x2="494" y1="165" y2="165"></line>
+<!-- Bandra-Worli Sea Link Pylon Cable Geometry (Modern Mumbai contrast) -->
+<path d="M 880 195 L 905 60 L 930 195" stroke-width="1.8"></path>
+<!-- Harp Cable stays -->
+<line stroke-width="0.75" x1="905" x2="820" y1="75" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="845" y1="95" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="865" y1="115" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="880" y1="140" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="990" y1="75" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="965" y1="95" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="945" y1="115" y2="195"></line>
+<line stroke-width="0.75" x1="905" x2="930" y1="140" y2="195"></line>
+<!-- Vintage Bombay Dockyard Cranes & Tenement Rooflines Right -->
+<path d="M 1140 195 L 1140 170 L 1170 170 L 1170 155 L 1200 155 L 1200 195"></path>
+<path d="M 1240 195 L 1260 145 L 1290 145 L 1265 195"></path>
+<line x1="1260" x2="1310" y1="145" y2="120"></line>
+<line stroke-dasharray="2 2" x1="1310" x2="1310" y1="120" y2="195"></line>
+</g>
+<!-- Dual Railway Tracks -->
+<line stroke="currentColor" stroke-width="1.5" x1="0" x2="1440" y1="198" y2="198"></line>
+<line stroke="currentColor" stroke-width="1.5" x1="0" x2="1440" y1="202" y2="202"></line>
+<!-- Track Sleepers -->
+<path d="M 0 200 L 1440 200" opacity="0.6" stroke="currentColor" stroke-dasharray="2 10" stroke-width="4"></path>
+</svg>
+<!-- Western Railway EMU Vintage Suburban Train Gliding Across Bottom -->
+<div class="absolute bottom-1 w-full overflow-hidden opacity-[0.11]">
+<svg class="animate-train w-[680px] h-12" fill="none" viewbox="0 0 680 48">
+<rect height="32" rx="2.5" stroke="currentColor" stroke-width="1.5" width="670" x="5" y="6"></rect>
+<!-- Roof ventilator domes -->
+<ellipse cx="60" cy="5" rx="10" ry="2" stroke="currentColor" stroke-width="1"></ellipse>
+<ellipse cx="220" cy="5" rx="10" ry="2" stroke="currentColor" stroke-width="1"></ellipse>
+<ellipse cx="380" cy="5" rx="10" ry="2" stroke="currentColor" stroke-width="1"></ellipse>
+<ellipse cx="540" cy="5" rx="10" ry="2" stroke="currentColor" stroke-width="1"></ellipse>
+<!-- Windows with characteristic safety bars -->
+<g stroke="currentColor" stroke-width="0.9">
+<!-- Coach 1 -->
+<rect height="18" rx="1" width="30" x="20" y="12"></rect>
+<line x1="28" x2="28" y1="12" y2="30"></line>
+<line x1="38" x2="38" y1="12" y2="30"></line>
+<rect height="18" rx="1" width="30" x="62" y="12"></rect>
+<line x1="72" x2="72" y1="12" y2="30"></line>
+<line x1="82" x2="82" y1="12" y2="30"></line>
+<!-- Open sliding middle door with grab handle -->
+<rect height="28" stroke-width="1.2" width="24" x="105" y="10"></rect>
+<line stroke-width="1.2" x1="117" x2="117" y1="10" y2="38"></line>
+<rect height="18" rx="1" width="30" x="140" y="12"></rect>
+<line x1="150" x2="150" y1="12" y2="30"></line>
+<line x1="160" x2="160" y1="12" y2="30"></line>
+<!-- Coach Coupler Divider -->
+<line stroke-width="2" x1="185" x2="185" y1="4" y2="40"></line>
+<!-- Coach 2 -->
+<rect height="18" rx="1" width="30" x="200" y="12"></rect>
+<line x1="210" x2="210" y1="12" y2="30"></line>
+<line x1="220" x2="220" y1="12" y2="30"></line>
+<rect height="18" rx="1" width="30" x="242" y="12"></rect>
+<line x1="252" x2="252" y1="12" y2="30"></line>
+<line x1="262" x2="262" y1="12" y2="30"></line>
+<rect height="28" stroke-width="1.2" width="24" x="285" y="10"></rect>
+<line stroke-width="1.2" x1="297" x2="297" y1="10" y2="38"></line>
+<rect height="18" rx="1" width="30" x="320" y="12"></rect>
+<line x1="330" x2="330" y1="12" y2="30"></line>
+<line x1="340" x2="340" y1="12" y2="30"></line>
+<line stroke-width="2" x1="365" x2="365" y1="4" y2="40"></line>
+<!-- Coach 3 -->
+<rect height="18" rx="1" width="30" x="380" y="12"></rect>
+<line x1="390" x2="390" y1="12" y2="30"></line>
+<line x1="400" x2="400" y1="12" y2="30"></line>
+<rect height="18" rx="1" width="30" x="422" y="12"></rect>
+<line x1="432" x2="432" y1="12" y2="30"></line>
+<line x1="442" x2="442" y1="12" y2="30"></line>
+<rect height="28" stroke-width="1.2" width="24" x="465" y="10"></rect>
+<line stroke-width="1.2" x1="477" x2="477" y1="10" y2="38"></line>
+<rect height="18" rx="1" width="30" x="500" y="12"></rect>
+<line x1="510" x2="510" y1="12" y2="30"></line>
+<line x1="520" x2="520" y1="12" y2="30"></line>
+<line stroke-width="2" x1="545" x2="545" y1="4" y2="40"></line>
+<!-- Coach 4 -->
+<rect height="18" rx="1" width="30" x="560" y="12"></rect>
+<line x1="570" x2="570" y1="12" y2="30"></line>
+<line x1="580" x2="580" y1="12" y2="30"></line>
+<rect height="18" rx="1" width="30" x="602" y="12"></rect>
+<line x1="612" x2="612" y1="12" y2="30"></line>
+<line x1="622" x2="622" y1="12" y2="30"></line>
+<rect height="28" stroke-width="1.2" width="24" x="642" y="10"></rect>
+</g>
+<!-- Heavy iron wheel bogies -->
+<circle cx="75" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="170" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="255" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="350" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="435" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="530" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+<circle cx="615" cy="40" r="4" stroke="currentColor" stroke-width="1.3"></circle>
+</svg>
+</div>
+</div>
+<!-- ================= COMPACT LAPTOP HEADER ================= -->
+<header class="fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 py-3.5 flex items-center justify-between border-b border-current/10 backdrop-blur-[2px]">
+<!-- Wordmark & Marathi Accent -->
+<a class="flex items-center gap-3 group" href="#f0" onclick="goToFrame(0); return false;">
+<!-- 4-tier tiffin mark icon -->
+<svg class="w-5 h-6 text-current group-hover:scale-105 transition-transform" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 28">
+<path d="M12 2 C8 2 8 5 8 5 L16 5 C16 5 16 2 12 2 Z"></path>
+<rect height="4" rx="1" width="14" x="5" y="6"></rect>
+<rect height="4" rx="1" width="14" x="5" y="11"></rect>
+<rect height="4" rx="1" width="14" x="5" y="16"></rect>
+<rect height="5" rx="1" width="14" x="5" y="21"></rect>
+<line stroke-dasharray="1 1" x1="19" x2="19" y1="6" y2="25"></line>
+<line stroke-dasharray="1 1" x1="5" x2="5" y1="6" y2="25"></line>
+</svg>
+<div>
+<div class="font-barlow-caps font-extrabold uppercase tracking-[0.08em] text-base leading-none">
+          Dabbawala Protocol
+        </div>
+<div class="font-marathi text-[10px] opacity-70 tracking-wide mt-0.5 leading-none">
+          मुंबईचे डबेवाले · स्वायत्त यंत्रणा
+        </div>
+</div>
+</a>
+<!-- Compact Top Right Nav -->
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center gap-2 font-mono-code text-[11px] opacity-65 border-r border-current/20 pr-6">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>NET: ETHGLOBAL LIVE</span>
+</div>
+<a class="font-mono-code text-xs tracking-wider uppercase opacity-75 hover:opacity-100 transition-opacity" href="https://github.com" rel="noopener" target="_blank">
+        GitHub
+      </a>
+<button class="bg-[#FFC20E] text-[#14110F] font-barlow-caps font-extrabold uppercase text-xs tracking-wider px-4 py-2 rounded-sm border-[1.5px] border-[#14110F] btn-shadow">
+        Launch app
+      </button>
+</div>
+</header>
+<!-- ================= LEFT RAIL TIMETABLE PROGRESS (Optimized for 768px height) ================= -->
+<aside aria-label="Protocol rail progress" class="fixed left-5 sm:left-7 top-[48%] -translate-y-1/2 z-40 hidden md:flex flex-col items-center text-current">
+<div class="font-barlow-caps text-[9px] tracking-widest uppercase opacity-45 -rotate-90 origin-center mb-5 whitespace-nowrap">
+      RAIL TIMETABLE
+    </div>
+<div class="flex flex-col items-center gap-2">
+<!-- 00 Hero Cue -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(0)" title="F0 Hero">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">00</span>
+<span class="rail-dot active" id="dot-0"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Station 1 ENS -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(1)" title="Check 1: ENS">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">01</span>
+<span class="rail-dot" id="dot-1"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Station 2 Hedera -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(2)" title="Check 2: Hedera x402">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">02</span>
+<span class="rail-dot" id="dot-2"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Station 3 0G Compute -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(3)" title="Check 3: 0G Compute">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">03</span>
+<span class="rail-dot" id="dot-3"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Station 4 Human Gate -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(4)" title="Check 4: Human Gate">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">04</span>
+<span class="rail-dot" id="dot-4"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Station 5 0G Storage -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(5)" title="Check 5: 0G Storage">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">05</span>
+<span class="rail-dot" id="dot-5"></span>
+</button>
+<div class="w-px h-2.5 bg-current opacity-20"></div>
+<!-- Closing -->
+<button class="group flex items-center gap-2 p-1" onclick="goToFrame(6)" title="F6 Closing">
+<span class="font-barlow-caps text-[11px] font-bold opacity-50 group-hover:opacity-100 transition-opacity">06</span>
+<span class="rail-dot" id="dot-6"></span>
+</button>
+</div>
+</aside>
+<!-- ================= MAIN PINNED STAGE (LAPTOP VIEWPORT OPTIMIZED: 1366x768 to 1440x900) ================= -->
+<main class="relative w-full max-w-[1340px] h-[100vh] max-h-[860px] mx-auto px-12 sm:px-16 md:px-20 lg:px-24 flex items-center justify-between pt-10 pb-16">
+<!-- LEFT: 490px Text Block (Harmonious laptop scale, no awkward scroll) -->
+<div class="relative z-10 w-full max-w-[500px] flex flex-col justify-center my-auto">
+<!-- ============ F0 HERO ============ -->
+<section class="frame-content transition-all duration-300" id="frame-text-0">
+<div class="flex items-center gap-3 font-mono-code text-[11px] tracking-[0.14em] uppercase opacity-75 mb-3.5">
+<span class="bg-[#14110F]/10 dark:bg-white/10 px-2 py-0.5 rounded">ETHGLOBAL MUMBAI 2026</span>
+<span class="opacity-40">·</span>
+<span>OPEN SOURCE</span>
+</div>
+<h1 class="font-serif-display text-5xl sm:text-[58px] lg:text-[64px] leading-[0.98] tracking-tight mb-5">
+          Every robot gets a passport, a budget and a <em class="italic font-normal">stop button</em>.
+        </h1>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-7 max-w-[460px]">
+          An open protocol for machines that move and spend. Public identity, metered payments, and replayable decisions across Mumbai's urban grid.
+        </p>
+<div class="flex flex-wrap items-center gap-4 sm:gap-6">
+<button class="bg-[#FFC20E] text-[#14110F] font-barlow-caps font-extrabold uppercase text-base tracking-wider px-6 py-2.5 rounded-sm border-[1.5px] border-[#14110F] btn-shadow">
+            Launch app
+          </button>
+<div class="font-mono-code text-xs tracking-wider opacity-70 flex items-center gap-2 cursor-pointer hover:opacity-100" onclick="goToFrame(1)">
+<span>Scroll or scrub below to open</span>
+<span class="inline-block animate-bounce text-[#FFC20E]">↓</span>
+</div>
+</div>
+</section>
+<!-- ============ F1 CHECK 1 (ENS) ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-1">
+<div class="relative">
+<div class="absolute -top-10 -left-6 outline-numeral font-barlow-caps font-black text-[100px] pointer-events-none">
+            01
+          </div>
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.14em] uppercase text-[#FFC20E] bg-black/50 px-2.5 py-0.5 rounded inline-block mb-3">
+              CHECK 1 OF 5 · ENS PASSPORT
+            </div>
+<h2 class="font-serif-display text-4xl sm:text-5xl lg:text-[54px] leading-[1.0] tracking-tight mb-4">
+              Read the <em class="italic">passport</em>.
+            </h2>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-5 max-w-[460px]">
+              Before it moves, the robot's public ENS record is read: where it may go, what it may spend, and whether it is active.
+            </p>
+<div class="border-l-2 border-[#D7261E] pl-3.5 py-1 mb-5 bg-[#D7261E]/5 rounded-r">
+<div class="flex items-center gap-2 mb-1">
+<span class="stamp-badge text-[11px]">HALTED</span>
+<span class="font-mono-code text-[10px] opacity-70 uppercase">DETERMINISTIC GUARD</span>
+</div>
+<p class="text-xs sm:text-[13px] opacity-90 italic">
+                “One ENS text record flips and this robot stops. The others keep going.”
+              </p>
+</div>
+<div class="inline-flex items-center gap-2 font-mono-code text-[11px] bg-black/10 dark:bg-white/10 px-3 py-1.5 rounded border border-current/20">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+<span class="font-semibold">ramu.dabbawala.eth</span>
+<span class="opacity-40">·</span>
+<span class="opacity-75">block 7,204,118</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ F2 CHECK 2 (HEDERA x402) ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-2">
+<div class="relative">
+<div class="absolute -top-10 -left-6 outline-numeral font-barlow-caps font-black text-[100px] pointer-events-none">
+            02
+          </div>
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.14em] uppercase text-[#FFC20E] bg-black/50 px-2.5 py-0.5 rounded inline-block mb-3">
+              CHECK 2 OF 5 · HEDERA x402
+            </div>
+<h2 class="font-serif-display text-4xl sm:text-5xl lg:text-[54px] leading-[1.0] tracking-tight mb-4">
+              Pay per <em class="italic">request</em>.
+            </h2>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-5 max-w-[460px]">
+              Route intel is bought one request at a time, signed only if the payment fits inside the robot's real-time budget envelope.
+            </p>
+<div class="border-l-2 border-[#D7261E] pl-3.5 py-1 mb-5 bg-[#D7261E]/5 rounded-r">
+<div class="flex items-center gap-2 mb-1">
+<span class="stamp-badge text-[11px]">REFUSED</span>
+<span class="font-mono-code text-[10px] opacity-70 uppercase">BUDGET ENFORCEMENT</span>
+</div>
+<p class="text-xs sm:text-[13px] opacity-90 italic">
+                “Over budget threshold, so the transaction voucher is never signed.”
+              </p>
+</div>
+<div class="inline-flex items-center gap-2 font-mono-code text-[11px] bg-black/10 dark:bg-white/10 px-3 py-1.5 rounded border border-current/20">
+<span class="text-[#FFC20E] font-bold">0.002 HBAR</span>
+<span class="opacity-40">·</span>
+<span class="opacity-75">tx 0.0.4821937@1712904000</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ F3 CHECK 3 (0G COMPUTE) ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-3">
+<div class="relative">
+<div class="absolute -top-10 -left-6 outline-numeral font-barlow-caps font-black text-[100px] pointer-events-none">
+            03
+          </div>
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.14em] uppercase text-[#FFC20E] bg-black/50 px-2.5 py-0.5 rounded inline-block mb-3">
+              CHECK 3 OF 5 · 0G COMPUTE
+            </div>
+<h2 class="font-serif-display text-4xl sm:text-5xl lg:text-[54px] leading-[1.0] tracking-tight mb-4">
+              Decide, with a <em class="italic">receipt</em>.
+            </h2>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-5 max-w-[460px]">
+              Every checkpoint decision comes from verified 0G compute with an exact cryptographic request ID replayed anytime.
+            </p>
+<div class="border-l-2 border-[#D7261E] pl-3.5 py-1 mb-5 bg-[#D7261E]/5 rounded-r">
+<div class="flex items-center gap-2 mb-1">
+<span class="stamp-badge text-[11px]">SAFE-STOP</span>
+<span class="font-mono-code text-[10px] opacity-70 uppercase">ORACLE QUORUM</span>
+</div>
+<p class="text-xs sm:text-[13px] opacity-90 italic">
+                “0G unreachable, so the machine halts. No decision beats an untested guess.”
+              </p>
+</div>
+<div class="inline-flex items-center gap-2 font-mono-code text-[11px] bg-black/10 dark:bg-white/10 px-3 py-1.5 rounded border border-current/20">
+<span class="opacity-75">req 0g_req_7f3a2b9f…c91</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ F4 CHECK 4 (HUMAN GATE) ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-4">
+<div class="relative">
+<div class="absolute -top-10 -left-6 outline-numeral font-barlow-caps font-black text-[100px] pointer-events-none">
+            04
+          </div>
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.14em] uppercase text-[#FFC20E] bg-black/50 px-2.5 py-0.5 rounded inline-block mb-3">
+              CHECK 4 OF 5 · HUMAN GATE
+            </div>
+<h2 class="font-serif-display text-4xl sm:text-5xl lg:text-[54px] leading-[1.0] tracking-tight mb-4">
+              Ask a <em class="italic">human</em>.
+            </h2>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-5 max-w-[460px]">
+              Restricted railway corridors open only with a single-use cryptographically signed human permit.
+            </p>
+<div class="border-l-2 border-[#D7261E] pl-3.5 py-1 mb-5 bg-[#D7261E]/5 rounded-r">
+<div class="flex items-center gap-2 mb-1">
+<span class="stamp-badge text-[11px]">DENIED</span>
+<span class="font-mono-code text-[10px] opacity-70 uppercase">HUMAN OVERRIDE</span>
+</div>
+<p class="text-xs sm:text-[13px] opacity-90 italic">
+                “Denied or expired permit: gate remains locked and robot reroutes instantly.”
+              </p>
+</div>
+<div class="inline-flex items-center gap-2 font-mono-code text-[11px] bg-black/10 dark:bg-white/10 px-3 py-1.5 rounded border border-current/20">
+<span class="text-amber-500 font-bold">zone R-2</span>
+<span class="opacity-40">·</span>
+<span>single-use</span>
+<span class="opacity-40">·</span>
+<span>ttl: 60s</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ F5 CHECK 5 (0G STORAGE) ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-5">
+<div class="relative">
+<div class="absolute -top-10 -left-6 outline-numeral font-barlow-caps font-black text-[100px] pointer-events-none">
+            05
+          </div>
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.14em] uppercase text-[#FFC20E] bg-black/50 px-2.5 py-0.5 rounded inline-block mb-3">
+              CHECK 5 OF 5 · 0G STORAGE
+            </div>
+<h2 class="font-serif-display text-4xl sm:text-5xl lg:text-[54px] leading-[1.0] tracking-tight mb-4 text-[#F2EADB]">
+              Leave a <em class="italic text-[#FFC20E]">record</em>.
+            </h2>
+<p class="text-base sm:text-[17px] leading-[1.55] opacity-85 mb-5 max-w-[460px] text-[#F2EADB]/90">
+              The entire run is appended to an immutable decentralized episode log for transparent post-hoc audit.
+            </p>
+<div class="border-l-2 border-[#FFC20E] pl-3.5 py-1 mb-5 bg-white/5 rounded-r">
+<div class="flex items-center gap-2 mb-1">
+<span class="proof-badge text-[11px]">THE PROOF</span>
+<span class="font-mono-code text-[10px] opacity-70 uppercase text-[#F2EADB]">PERPETUAL AUDIT</span>
+</div>
+<p class="text-xs sm:text-[13px] opacity-90 italic text-[#F2EADB]/90">
+                “Not just the operator: any third-party auditor can mathematically replay it.”
+              </p>
+</div>
+<div class="inline-flex items-center gap-2 font-mono-code text-[11px] bg-white/10 px-3 py-1.5 rounded border border-white/20 text-[#F2EADB]">
+<span class="opacity-75">root 0x9f2cb48a…b81</span>
+<span class="opacity-40">·</span>
+<span class="text-emerald-400">IMMUTABLE (0G AUDIT)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============ F6 CLOSING ============ -->
+<section class="frame-content hidden transition-all duration-300" id="frame-text-6">
+<div class="relative z-10">
+<div class="font-mono-code text-[11px] tracking-[0.16em] uppercase text-[#FFC20E] mb-3">
+            DABBAWALA PROTOCOL · WESTERN RAILWAY DIVISION
+          </div>
+<h2 class="font-serif-display text-5xl sm:text-6xl leading-[0.98] tracking-tight mb-5 text-[#F2EADB]">
+            See a robot <em class="italic text-[#FFC20E]">refuse</em>.
+          </h2>
+<div class="mb-6">
+<button class="bg-[#FFC20E] text-[#14110F] font-barlow-caps font-extrabold uppercase text-lg tracking-wider px-8 py-3 rounded-sm border-2 border-black btn-shadow">
+              Launch app
+            </button>
+</div>
+<div class="border-t border-white/15 pt-4 flex flex-col gap-2.5 font-mono-code text-[11px] text-[#F2EADB]/70">
+<p class="max-w-[450px] leading-relaxed">
+              Simulation: physical city &amp; robots are simulated, approval proofs are mocked. Permission, payment, and audit layers are cryptographically live.
+            </p>
+<div class="flex flex-wrap items-center gap-4 pt-1">
+<a class="hover:underline text-[#F2EADB]" href="#">GitHub</a>
+<span class="opacity-30">·</span>
+<a class="hover:underline text-[#F2EADB]" href="#">Docs</a>
+<span class="opacity-30">·</span>
+<span>ETHGlobal Mumbai 2026</span>
+<span class="opacity-30">·</span>
+<span class="font-marathi text-xs text-[#FFC20E]">मुंबईचे डबेवाले</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT: THE 5-TIER STEEL TIFFIN (PROPORTIONALLY SCALED FOR LAPTOP: 450px MAX HEIGHT) -->
+<div class="relative z-10 w-full max-w-[440px] flex items-center justify-center pl-2 my-auto">
+<!-- Stage Motion Technical Stamp (Engineer Note) -->
+<div class="absolute -top-9 right-2 hidden xl:flex items-center gap-2 font-mono-code text-[10px] opacity-70 bg-black/5 dark:bg-white/5 border border-current/20 px-2.5 py-1 rounded">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#FFC20E] animate-ping"></span>
+<span>PINNED SCENE: 5 stacked tiers • 450px viewport fit</span>
+</div>
+<!-- THE STEEL TIFFIN SVG (Compact viewBox 360 x 510) -->
+<div class="relative w-full max-w-[340px] h-[450px] flex items-center justify-center">
+<svg class="w-full h-full overflow-visible drop-shadow-sm" fill="none" id="tiffin-scene" viewbox="0 0 350 490" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- 3-Tone Shading on Steel Tiffin Cylinders -->
+<lineargradient id="tiffin-steel-grad" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#C2C6C5"></stop>
+<stop offset="25%" stop-color="#E5E8E7"></stop>
+<stop offset="70%" stop-color="#C2C6C5"></stop>
+<stop offset="100%" stop-color="#9FA2A1"></stop>
+</lineargradient>
+<!-- Active Peeli Yellow Tone -->
+<lineargradient id="tiffin-yellow-grad" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#FFC20E"></stop>
+<stop offset="30%" stop-color="#FFD768"></stop>
+<stop offset="75%" stop-color="#FFC20E"></stop>
+<stop offset="100%" stop-color="#D9A100"></stop>
+</lineargradient>
+<pattern height="6" id="brushed-metal" patternunits="userSpaceOnUse" width="6">
+<line opacity="0.3" stroke="#ffffff" stroke-width="0.3" x1="0" x2="6" y1="3" y2="3"></line>
+</pattern>
+</defs>
+<!-- Ground Ellipse Shadow -->
+<ellipse cx="170" cy="460" fill="#14110F" opacity="0.16" rx="125" ry="14"></ellipse>
+<!-- VERTICAL DUAL LOCKING RAILS (Heavy brass/steel clasps) -->
+<g id="tiffin-clasps" stroke="#14110F" stroke-width="2.2">
+<!-- Left locking bar -->
+<line x1="50" x2="50" y1="80" y2="445"></line>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="45" y="160"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="45" y="235"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="45" y="310"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="45" y="385"></rect>
+<!-- Right locking bar -->
+<line x1="290" x2="290" y1="80" y2="445"></line>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="285" y="160"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="285" y="235"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="285" y="310"></rect>
+<rect fill="#C9CCCB" height="15" rx="1.5" width="10" x="285" y="385"></rect>
+</g>
+<!-- ================= LID & HANDLE (Lifts away in F1) ================= -->
+<g class="tiffin-tier" id="tiffin-lid">
+<!-- Top brass/steel carrying loop -->
+<path d="M 120 45 C 120 18, 220 18, 220 45" fill="none" stroke="#14110F" stroke-linecap="round" stroke-width="4"></path>
+<circle cx="120" cy="45" fill="#14110F" r="4.5"></circle>
+<circle cx="220" cy="45" fill="#14110F" r="4.5"></circle>
+<!-- Curved dome lid -->
+<path d="M 60 82 C 60 46, 280 46, 280 82 Z" fill="url(#tiffin-steel-grad)" stroke="#14110F" stroke-width="2.2"></path>
+<!-- Lid rim -->
+<rect fill="#9FA2A1" height="8" rx="2.5" stroke="#14110F" stroke-width="1.8" width="224" x="58" y="81"></rect>
+<!-- Engraved lid seal -->
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="10" font-weight="800" letter-spacing="1" opacity="0.65" text-anchor="middle" x="170" y="70">DABBAWALA · 1890</text>
+</g>
+<!-- ================= TIER 1: ENS PASSPORT (Lifts in F2) ================= -->
+<g class="tiffin-tier" id="tier-1">
+<rect fill="url(#tiffin-steel-grad)" height="70" rx="5" stroke="#14110F" stroke-width="2.2" width="220" x="60" y="90"></rect>
+<rect fill="#9FA2A1" height="6" rx="1.5" stroke="#14110F" stroke-width="1.5" width="220" x="60" y="154"></rect>
+<!-- Hand-Painted Dabba Mark 1 -->
+<rect fill="#F2EADB" height="38" rx="2.5" stroke="#14110F" stroke-width="1.4" width="80" x="76" y="105"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="86" y="132">A</text>
+<circle cx="114" cy="124" fill="#FFC20E" r="5.5" stroke="#14110F" stroke-width="1.4"></circle>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="134" y="132">7</text>
+<!-- Station Routing label & Outline numeral -->
+<text fill="currentColor" font-family="'Barlow Condensed'" font-size="28" font-weight="900" x="306" y="132">01</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="10" font-weight="600" x="180" y="121">ENS PASS</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="8.5" opacity="0.75" x="180" y="136">ANDHERI</text>
+</g>
+<!-- ================= TIER 2: HEDERA x402 PAYMENT (Lifts in F3) ================= -->
+<g class="tiffin-tier" id="tier-2">
+<rect fill="url(#tiffin-steel-grad)" height="70" rx="5" stroke="#14110F" stroke-width="2.2" width="220" x="60" y="163"></rect>
+<rect fill="#9FA2A1" height="6" rx="1.5" stroke="#14110F" stroke-width="1.5" width="220" x="60" y="227"></rect>
+<!-- Hand-Painted Dabba Mark 2 -->
+<rect fill="#F2EADB" height="38" rx="2.5" stroke="#14110F" stroke-width="1.4" width="80" x="76" y="178"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="86" y="205">B</text>
+<circle cx="114" cy="197" fill="#1F7A4D" r="5.5" stroke="#14110F" stroke-width="1.4"></circle>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="134" y="205">2</text>
+<text fill="currentColor" font-family="'Barlow Condensed'" font-size="28" font-weight="900" x="306" y="205">02</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="10" font-weight="600" x="180" y="194">HEDERA x402</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="8.5" opacity="0.75" x="180" y="209">METERED</text>
+</g>
+<!-- ================= TIER 3: 0G COMPUTE (Lifts in F4) ================= -->
+<g class="tiffin-tier" id="tier-3">
+<rect fill="url(#tiffin-steel-grad)" height="70" rx="5" stroke="#14110F" stroke-width="2.2" width="220" x="60" y="236"></rect>
+<rect fill="#9FA2A1" height="6" rx="1.5" stroke="#14110F" stroke-width="1.5" width="220" x="60" y="300"></rect>
+<!-- Hand-Painted Dabba Mark 3 -->
+<rect fill="#F2EADB" height="38" rx="2.5" stroke="#14110F" stroke-width="1.4" width="80" x="76" y="251"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="86" y="278">C</text>
+<circle cx="114" cy="270" fill="#D7261E" r="5.5" stroke="#14110F" stroke-width="1.4"></circle>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="134" y="278">9</text>
+<text fill="currentColor" font-family="'Barlow Condensed'" font-size="28" font-weight="900" x="306" y="278">03</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="10" font-weight="600" x="180" y="267">0G DECIDE</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="8.5" opacity="0.75" x="180" y="282">REPLAYABLE</text>
+</g>
+<!-- ================= TIER 4: HUMAN APPROVAL GATE (Lifts in F5) ================= -->
+<g class="tiffin-tier" id="tier-4">
+<rect fill="url(#tiffin-steel-grad)" height="70" rx="5" stroke="#14110F" stroke-width="2.2" width="220" x="60" y="309"></rect>
+<rect fill="#9FA2A1" height="6" rx="1.5" stroke="#14110F" stroke-width="1.5" width="220" x="60" y="373"></rect>
+<!-- Hand-Painted Dabba Mark 4 -->
+<rect fill="#F2EADB" height="38" rx="2.5" stroke="#14110F" stroke-width="1.4" width="80" x="76" y="324"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="86" y="351">R</text>
+<circle cx="114" cy="343" fill="#FFC20E" r="5.5" stroke="#14110F" stroke-width="1.4"></circle>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="134" y="351">2</text>
+<text fill="currentColor" font-family="'Barlow Condensed'" font-size="28" font-weight="900" x="306" y="351">04</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="10" font-weight="600" x="180" y="340">HUMAN GATE</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="8.5" opacity="0.75" x="180" y="355">SINGLE-USE</text>
+</g>
+<!-- ================= TIER 5: 0G STORAGE RECORD (Base Tier) ================= -->
+<g class="tiffin-tier" id="tier-5">
+<!-- Curved rounded base tier -->
+<path d="M 60 382 L 280 382 L 280 435 C 280 448, 60 448, 60 435 Z" fill="url(#tiffin-steel-grad)" stroke="#14110F" stroke-width="2.2"></path>
+<rect fill="#9FA2A1" height="5" stroke="#14110F" stroke-width="1.4" width="220" x="60" y="380"></rect>
+<!-- Hand-Painted Dabba Mark 5 -->
+<rect fill="#F2EADB" height="38" rx="2.5" stroke="#14110F" stroke-width="1.4" width="80" x="76" y="394"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="86" y="421">L</text>
+<circle cx="114" cy="413" fill="#1F7A4D" r="5.5" stroke="#14110F" stroke-width="1.4"></circle>
+<text fill="#14110F" font-family="'Barlow Condensed'" font-size="24" font-weight="900" x="134" y="421">0</text>
+<text fill="currentColor" font-family="'Barlow Condensed'" font-size="28" font-weight="900" x="306" y="421">05</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="10" font-weight="600" x="180" y="410">0G AUDIT</text>
+<text fill="#14110F" font-family="'Geist Mono'" font-size="8.5" opacity="0.75" x="180" y="425">PERPETUAL</text>
+</g>
+</svg>
+</div>
+</div>
+</main>
+<!-- ================= DOCKED LAPTOP STAGE SCRUBBER BAR ================= -->
+<footer class="fixed bottom-3.5 left-1/2 -translate-x-1/2 z-50 bg-[#14110F]/90 text-[#F2EADB] backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-2xl">
+<span class="font-mono-code text-[10px] text-[#FFC20E] uppercase tracking-wider px-2 hidden sm:inline border-r border-white/20">
+      STAGE SCRUB:
+    </span>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all bg-[#FFC20E] text-black" data-stage="0" onclick="goToFrame(0)">F0 Hero</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="1" onclick="goToFrame(1)">F1 Passport</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="2" onclick="goToFrame(2)">F2 Payment</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="3" onclick="goToFrame(3)">F3 Decide</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="4" onclick="goToFrame(4)">F4 Human</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="5" onclick="goToFrame(5)">F5 Storage</button>
+<button class="stage-btn px-2.5 py-1 rounded text-xs font-barlow-caps font-bold transition-all text-white/70 hover:text-white" data-stage="6" onclick="goToFrame(6)">F6 Close</button>
+</footer>
+<!-- ================= STATE SCRUBBING & SCROLL STORY CONTROLLER ================= -->
+<script>
+    let currentFrame = 0;
+    const totalFrames = 7;
+
+    const lid = document.getElementById('tiffin-lid');
+    const t1 = document.getElementById('tier-1');
+    const t2 = document.getElementById('tier-2');
+    const t3 = document.getElementById('tier-3');
+    const t4 = document.getElementById('tier-4');
+    const t5 = document.getElementById('tier-5');
+
+    function updateTierFills(activeTierIndex) {
+      const tiers = [t1, t2, t3, t4, t5];
+      tiers.forEach((tier, idx) => {
+        const rect = tier.querySelector('rect, path');
+        if (idx === activeTierIndex - 1) {
+          rect.setAttribute('fill', 'url(#tiffin-yellow-grad)');
+        } else {
+          rect.setAttribute('fill', 'url(#tiffin-steel-grad)');
+        }
+      });
+    }
+
+    function goToFrame(frameIdx) {
+      currentFrame = frameIdx;
+
+      // Update Body Theme
+      document.body.className = `theme-f${frameIdx} selection:bg-[#FFC20E] selection:text-black relative`;
+
+      // Update Rail Dots
+      for (let i = 0; i <= 6; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (dot) {
+          if (i === frameIdx) {
+            dot.classList.add('active');
+          } else {
+            dot.classList.remove('active');
+          }
+        }
+      }
+
+      // Update Quick-pick bar active state
+      document.querySelectorAll('.stage-btn').forEach(btn => {
+        if (parseInt(btn.getAttribute('data-stage')) === frameIdx) {
+          btn.classList.add('bg-[#FFC20E]', 'text-black');
+          btn.classList.remove('text-white/70');
+        } else {
+          btn.classList.remove('bg-[#FFC20E]', 'text-black');
+          btn.classList.add('text-white/70');
+        }
+      });
+
+      // Update Text Sections with fade
+      for (let i = 0; i <= 6; i++) {
+        const textSec = document.getElementById(`frame-text-${i}`);
+        if (textSec) {
+          if (i === frameIdx) {
+            textSec.classList.remove('hidden');
+            textSec.style.opacity = '1';
+            textSec.style.transform = 'translateY(0px)';
+          } else {
+            textSec.classList.add('hidden');
+            textSec.style.opacity = '0';
+            textSec.style.transform = 'translateY(8px)';
+          }
+        }
+      }
+
+      // Reset Tiffin Tiers
+      [lid, t1, t2, t3, t4, t5].forEach(el => {
+        el.classList.remove('tier-lifted', 'tier-lifted-far', 'tier-active');
+      });
+
+      // Frame-by-frame tiffin mechanics
+      if (frameIdx === 0) {
+        // Closed Tiffin
+        updateTierFills(-1);
+      } else if (frameIdx === 1) {
+        // F1: Lid lifts away, Tier 1 is active & yellow
+        lid.classList.add('tier-lifted');
+        t1.classList.add('tier-active');
+        updateTierFills(1);
+      } else if (frameIdx === 2) {
+        // F2: Lid gone, Tier 1 lifted away, Tier 2 is active & yellow
+        lid.classList.add('tier-lifted-far');
+        t1.classList.add('tier-lifted');
+        t2.classList.add('tier-active');
+        updateTierFills(2);
+      } else if (frameIdx === 3) {
+        // F3: Tiers 1-2 lifted, Tier 3 active & yellow
+        lid.classList.add('tier-lifted-far');
+        t1.classList.add('tier-lifted-far');
+        t2.classList.add('tier-lifted');
+        t3.classList.add('tier-active');
+        updateTierFills(3);
+      } else if (frameIdx === 4) {
+        // F4: Tiers 1-3 lifted, Tier 4 active & yellow
+        lid.classList.add('tier-lifted-far');
+        t1.classList.add('tier-lifted-far');
+        t2.classList.add('tier-lifted-far');
+        t3.classList.add('tier-lifted');
+        t4.classList.add('tier-active');
+        updateTierFills(4);
+      } else if (frameIdx === 5) {
+        // F5: Tiers 1-4 lifted, Tier 5 active & yellow
+        lid.classList.add('tier-lifted-far');
+        t1.classList.add('tier-lifted-far');
+        t2.classList.add('tier-lifted-far');
+        t3.classList.add('tier-lifted-far');
+        t4.classList.add('tier-lifted');
+        t5.classList.add('tier-active');
+        updateTierFills(5);
+      } else if (frameIdx === 6) {
+        // F6: All tiers inspected in final close
+        lid.classList.add('tier-lifted-far');
+        t1.classList.add('tier-lifted-far');
+        t2.classList.add('tier-lifted-far');
+        t3.classList.add('tier-lifted-far');
+        t4.classList.add('tier-lifted-far');
+        t5.classList.add('tier-active');
+        updateTierFills(5);
+      }
+    }
+
+    // Wheel and arrow key scrubbing (debounced)
+    let lastWheelTime = 0;
+    window.addEventListener('wheel', (e) => {
+      const now = Date.now();
+      if (now - lastWheelTime < 380) return;
+      if (e.deltaY > 20) {
+        if (currentFrame < totalFrames - 1) {
+          lastWheelTime = now;
+          goToFrame(currentFrame + 1);
+        }
+      } else if (e.deltaY < -20) {
+        if (currentFrame > 0) {
+          lastWheelTime = now;
+          goToFrame(currentFrame - 1);
+        }
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+        if (currentFrame < totalFrames - 1) goToFrame(currentFrame + 1);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        if (currentFrame > 0) goToFrame(currentFrame - 1);
+      }
+    });
+
+    // Start at Frame 0
+    goToFrame(0);
+  </script>
+</body></html>
