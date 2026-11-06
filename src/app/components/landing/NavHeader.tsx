@@ -1,5 +1,7 @@
 'use client';
 
+import TiffinMark from './TiffinMark';
+
 interface NavHeaderProps {
   onGoToFrame: (frame: number) => void;
 }
@@ -14,21 +16,7 @@ export default function NavHeader({ onGoToFrame }: NavHeaderProps) {
         className="flex items-center gap-3 group"
       >
         {/* 4-tier tiffin icon */}
-        <svg
-          className="w-5 h-6 text-current group-hover:scale-105 transition-transform"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          viewBox="0 0 24 28"
-        >
-          <path d="M12 2 C8 2 8 5 8 5 L16 5 C16 5 16 2 12 2 Z" />
-          <rect x="5" y="6" width="14" height="4" rx="1" />
-          <rect x="5" y="11" width="14" height="4" rx="1" />
-          <rect x="5" y="16" width="14" height="4" rx="1" />
-          <rect x="5" y="21" width="14" height="5" rx="1" />
-          <line x1="19" y1="6" x2="19" y2="25" strokeDasharray="1 1" />
-          <line x1="5" y1="6" x2="5" y2="25" strokeDasharray="1 1" />
-        </svg>
+        <TiffinMark className="w-5 h-6 text-current group-hover:scale-105 transition-transform" />
         <div>
           <div
             className="font-extrabold uppercase tracking-[0.08em] text-base leading-none"
@@ -52,7 +40,7 @@ export default function NavHeader({ onGoToFrame }: NavHeaderProps) {
           style={{ fontFamily: "'Geist Mono', monospace" }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>NET: ETHGLOBAL LIVE</span>
+          <span>NET: SepoliaETH</span>
         </div>
         <a
           href="https://github.com"

@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    // suppressHydrationWarning on <html>/<body>: a browser extension (attributes
+    // `bis_skin_checked`, `bis_register`, `__processed_*__`) injects into the DOM
+    // before React hydrates. None of those attributes are rendered by app code —
+    // VERIFIED against the JSX. React documents this exact false positive.
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -24,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full theme-f0">{children}</body>
+      <body className="min-h-full theme-f0" suppressHydrationWarning>{children}</body>
     </html>
   );
 }

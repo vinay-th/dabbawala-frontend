@@ -10,6 +10,7 @@ import NavHeader from './components/landing/NavHeader';
 import RailProgress from './components/landing/RailProgress';
 import StageScrubber from './components/landing/StageScrubber';
 import TiffinSVG from './components/landing/TiffinSVG';
+import DeveloperColophon from './components/landing/DeveloperColophon';
 import {
   Frame0Hero,
   Frame1ENS,
@@ -131,6 +132,13 @@ export default function Home() {
             </section>
           ))}
         </main>
+        {/* Credits also appear at the end of the reduced-motion stack. */}
+        <section
+          aria-label="Built by"
+          className="relative z-10 mx-auto flex w-full max-w-[1280px] flex-col justify-center px-12 pb-28"
+        >
+          <DeveloperColophon />
+        </section>
         <StageScrubber activeFrame={activeFrame} onGoToFrame={goToFrame} />
       </>
     );
@@ -169,9 +177,24 @@ export default function Home() {
             </AnimatePresence>
           </div>
 
-          {/* RIGHT: the 5-tier steel tiffin */}
+          {/* RIGHT: the 5-tier steel tiffin (F0-F5) → dev colophon (F6). */}
           <div className="relative z-10 flex w-full max-w-[440px] items-center justify-center pl-2">
-            <TiffinSVG activeFrame={activeFrame} />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeFrame === 6 ? 'colophon' : 'tiffin'}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="flex w-full justify-center"
+              >
+                {activeFrame === 6 ? (
+                  <DeveloperColophon />
+                ) : (
+                  <TiffinSVG activeFrame={activeFrame} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </section>
       </div>
