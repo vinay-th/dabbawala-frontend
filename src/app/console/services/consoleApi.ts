@@ -8,10 +8,32 @@
 import { SCENARIOS, getScenarioById } from "../data/scenarios";
 import type { GateRequest, RobotId, RobotPassport, ScenarioTestCase } from "../data/types";
 
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "").replace(/\/v1$/, "") + "/v1"
-    : "http://localhost:3001/v1");
+/**
+ * Resolve the API base URL.
+ *
+ * Production MUST NOT silently target localhost: a deployed browser cannot
+ * reach the operator's machine, and doing so turns every live call into a
+ * timeout that looks like a 0G outage. If NEXT_PUBLIC_API_URL is absent in a
+ * production build we use the known deployed backend origin; that host is
+ * still allowed to fail closed if it is unavailable.
+ */
+const CONFIGURED_API_URL =
+  typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.trim()
+    : "";
+
+const PRODUCTION_API_ORIGIN = "https://dabbawala-backend-service.onrender.com";
+const DEV_API_ORIGIN = "http://localhost:3001";
+
+const RAW_ORIGIN =
+  CONFIGURED_API_URL !== ""
+    ? CONFIGURED_API_URL
+    : process.env.NODE_ENV === "production"
+      ? PRODUCTION_API_ORIGIN
+      : DEV_API_ORIGIN;
+
+const API_BASE_URL = RAW_ORIGIN.replace(/\/+$/, "").replace(/\/v1$/, "") + "/v1";
+
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
   const controller = new AbortController();
@@ -191,20 +213,40 @@ export async function loadEpisodeLog(log: EpisodeLog): Promise<EpisodeLog> {
   return log;
 }
 
+export interface ZeroGProbeEvidence {
+  ok: boolean;
+  probedAtMs: number;
+  latencyMs: number;
+  mode: string;
+  model: string | null;
+  requestId: string | null;
+  routerRequestId: string | null;
+  provider: string | null;
+  teeVerified: boolean | null;
+  httpStatus: number | null;
+  errorCode: string | null;
+  detail: string | null;
+  reason: string | null;
+}
+
 export interface BackendReadiness {
   status: "ready" | "degraded";
-  checks: {
-    database: string;
-    ens_reader: string;
-    zero_g_router: string;
+  checks?: {
+    database?: string;
+    ens_reader?: string;
+    zero_g_router?: string;
   };
   zero_g: {
     compute: {
       status: "LIVE" | "MOCK" | "BLOCKED";
       blockedBy: string[];
-      endpoint: string | null;
+      endpoint?: string | null;
       model: string | null;
       proven: boolean;
+      /** A recent explicit probe completed a Router round-trip. */
+      reachable?: boolean;
+      /** That probe returned a TEE-verified proposal. */
+      verified?: boolean;
       lastSuccessAtMs: number | null;
       lastHaltFailure: string | null;
       successCount: number;
@@ -212,15 +254,16 @@ export interface BackendReadiness {
     };
     storage: {
       status: "LIVE" | "MOCK" | "BLOCKED";
-      blockedBy: string[];
+      blockedBy?: string[];
       indexerHost: string | null;
       chainId: number | null;
     };
-    networkProbed: false;
+    probe?: ZeroGProbeEvidence | null;
+    networkProbed?: false;
   };
 }
 
-/** GET /v1/ready -> Backend operational readiness */
+/** GET /v1/ready -> Backend operational readiness (never billable). */
 export async function loadBackendReadiness(): Promise<BackendReadiness | null> {
   try {
     const res = await fetchWithTimeout(`${API_BASE_URL}/ready`);
@@ -232,6 +275,33 @@ export async function loadBackendReadiness(): Promise<BackendReadiness | null> {
   }
   return null;
 }
+
+/**
+ * POST /v1/diagnostics/zero-g/probe -> one explicit, cached 0G diagnostic.
+ * This is the ONLY frontend action that may spend a billable inference.
+ * Call it from an explicit user action, never from a polling interval.
+ */
+export async function probeZeroG(force = false): Promise<ZeroGProbeEvidence | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `${API_BASE_URL}/diagnostics/zero-g/probe`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force }),
+      },
+      30_000,
+    );
+    if (res.ok) {
+      const body = (await res.json()) as { cached?: boolean; probe?: ZeroGProbeEvidence };
+      return body.probe ?? null;
+    }
+  } catch {
+    // Offline
+  }
+  return null;
+}
+
 
 /** POST /v1/mission/decide -> Trigger 0G Decision Checkpoint */
 export async function triggerMissionDecision(

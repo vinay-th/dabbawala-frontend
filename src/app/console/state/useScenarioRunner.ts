@@ -8,7 +8,7 @@
 // data is SIMULATED demo data until ROADMAP Phase B.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { submitGateDecision, triggerMissionDecision } from "../services/consoleApi";
+import { loadPassport, submitGateDecision, triggerMissionDecision } from "../services/consoleApi";
 import type {
   GateRequest,
   HaltReason,
@@ -78,6 +78,14 @@ const BASE_PROGRESS_PER_TICK = 0.012; // 1x -> ~4.2s per leg
 const GATE_TTL_MS = 60_000; // token TTL <= 60s (ROADMAP invariant 7)
 const CONVOY_LAG = 0.05; // progress stagger between robots
 const LANE_ORDER: RobotId[] = ["ramu", "sakhu", "janu"];
+
+/**
+ * Policy/passport budget is expressed in microHbar; x402 and the backend
+ * StateSummary use Hedera tinybars. 1 microHbar = 100 tinybars
+ * (1 HBAR = 1e6 microHbar = 1e8 tinybars). Conversion is explicit so the
+ * checkpoint payload never silently reports a fabricated zero budget.
+ */
+const TINYBARS_PER_MICROHBAR = 100;
 
 const HALT_STAMP: Record<string, Verdict> = {
   ZG_TIMEOUT: "SAFE-STOP",
@@ -152,6 +160,31 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     requestId: string;
   } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Authoritative checkpoint budget. Loaded from the passport endpoint
+  // (block-stamped ENS read in live mode, sim stub otherwise); never a
+  // hardcoded zero. If the passport cannot be read we keep "0" and the backend
+  // rejects before any billable inference.
+  const budgetRef = useRef<string>("0");
+  useEffect(() => {
+    let cancelled = false;
+    budgetRef.current = "0";
+    loadPassport(scenario.leadRobot)
+      .then((passport) => {
+        if (cancelled) return;
+        const microHbar = Number.isFinite(passport.budgetMicroHbar)
+          ? Math.max(0, Math.trunc(passport.budgetMicroHbar))
+          : 0;
+        budgetRef.current = String(microHbar * TINYBARS_PER_MICROHBAR);
+      })
+      .catch(() => {
+        if (!cancelled) budgetRef.current = "0";
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scenario.id, scenario.leadRobot]);
+
 
   // Adjust-state-during-render reset when a different scenario loads.
   const [lastScenarioId, setLastScenarioId] = useState(scenario.id);
@@ -382,21 +415,11 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
       }
 
       case "reroute": {
-        // Change to the specified authorised route based on routeId
-        // Look up the new route waypoints based on the routeId
-        const robotLane = scenario.lanes[scenario.leadRobot];
-        const currentRoute = robotLane.route;
-
-        // Determine the new route based on routeId
-        let newRoute: RouteWaypoint[];
-        if (routeId === "mahim-detour") {
-          // Use Mahim detour route for R-2 demonstration
-          newRoute = /* mahim detour waypoints */ currentRoute; // placeholder - would need route lookup
-        } else if (routeId === "churchgate-alternate") {
-          // Use alternate route
-          newRoute = /* alternate waypoints */ currentRoute; // placeholder
-        } else {
-          // Unknown routeId - fail closed
+        // The approved action is authoritative for authorisation, but route
+        // geometry is owned by the scenario fixture. A non-empty routeId is
+        // validated and the run advances deterministically; we do not invent
+        // waypoints that were never issued by the backend.
+        if (typeof routeId !== "string" || routeId.length === 0) {
           const haltReason: HaltReason = "ZG_MALFORMED";
           const verdict = stampForHalt(haltReason);
           return {
@@ -410,78 +433,41 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
           };
         }
 
-        // Update the robot's route and position
-        // The lane's route is replaced with the new route
-        const updatedLanes = scenario.lanes.map((lane, idx) => {
-          if (lane.robotId === scenario.leadRobot) {
-            return { ...lane, route: newRoute };
-          }
-          return lane;
-        });
-
-        // Compute new position along the new route
-        const totalWaypoints = newRoute.length;
-        const u = totalWaypoints > 1 ? 0.5 : 0; // start at middle of first leg
-        const pos = pointAlong(newRoute, u);
-
+        if (s.stepIndex === scenario.steps.length - 1) {
+          return {
+            ...s,
+            playing: false,
+            verdict: "REROUTED",
+            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
+            pendingDecision: false,
+          };
+        }
         return {
           ...s,
-          lanes: updatedLanes,
-          robots: scenario.lanes.map((lane, idx) => {
-            const lid = lane.robotId;
-            const l = updatedLanes[idx];
-            const rawU = (s.stepIndex + s.progress) / Math.max(1, scenario.steps.length);
-            const u = Math.max(0, rawU - (scenario.lanes.indexOf(lane) * 0.05));
-            const p = pointAlong(l.route, u);
-            return { id: lid, pos, state: "moving", callout: l.stepCallouts[Math.min(s.stepIndex, l.stepCallouts.length - 1)], progress: u };
-          }),
+          stepIndex: s.stepIndex + 1,
+          progress: 0,
           records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
           pendingDecision: false,
         };
       }
 
       case "handoff": {
-        // Execute the defined receiver handoff
-        // Sender transfers the dabba box to the receiving robot
-        // Both robots enter a real handoff state
-
-        // Determine sender and receiver (based on scenario)
-        // For simplicity, use the lead robot as sender and the next robot in line as receiver
-        const robotOrder: RobotId[] = ["ramu", "sakhu", "janu"];
-        const leadIndex = robotOrder.indexOf(scenario.leadRobot);
-        const senderId = scenario.leadRobot;
-        const receiverId = robotOrder[(leadIndex + 1) % robotOrder.length];
-
-        // Check if handoff is valid (both robots exist and are active)
-        if (!scenario.leadRobot || !receiverId) {
-          const haltReason: HaltReason = "ZG_MALFORMED";
-          const verdict = stampForHalt(haltReason);
+        // A handoff is a deterministic state transition. Robot runtime
+        // positions remain scenario-owned; the record proves the approved
+        // action was executed without fabricating a route or proof.
+        if (s.stepIndex === scenario.steps.length - 1) {
           return {
             ...s,
             playing: false,
-            haltReason,
-            verdict,
-            haltedRobots: [...s.haltedRobots, scenario.leadRobot],
-            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "stop", gateToken: null, gateDecision: null }],
+            verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
+            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
             pendingDecision: false,
           };
         }
-
-        // Update robot states to reflect handoff state
-        const updatedRobots = scenario.lanes.map((lane) => {
-          const lid = lane.robotId;
-          if (lid === senderId) {
-            return { ...lane, callout: "📦 Approaching handoff", state: "checkpoint" };
-          }
-          if (lid === receiverId) {
-            return { ...lane, callout: "⏳ Awaiting box", state: "checkpoint" };
-          }
-          return lane;
-        });
-
         return {
           ...s,
-          robots: updatedRobots,
+          stepIndex: s.stepIndex + 1,
+          progress: 0,
           records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
           pendingDecision: false,
         };
@@ -576,7 +562,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
             totalCheckpoints: scenario.steps.length,
             availableRoutes: scenario.lanes[scenario.leadRobot].route.map(wp => `r${wp.x}-${wp.y}`),
             restrictedZones: [], // populated from checkpoint data
-            remainingBudgetAtomic: "0", // will be read from passport/budget
+            remainingBudgetAtomic: budgetRef.current,
             scenarioHints: [],
             seed: `DABBAWALA_${scenario.id}_${currentStep}`,
           };
