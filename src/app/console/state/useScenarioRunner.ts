@@ -89,6 +89,7 @@ const INITIAL: RunnerState = {
   haltedRobots: [],
   records: [],
   pendingDecision: false,
+  decisionLock: null,
 };
 
 function stampForHalt(reason: HaltReason): Verdict {
@@ -211,12 +212,38 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
 
   // Main clock.
   useEffect(() => {
+    const decisionLock = useRef<number | null>(null);
+    
     tickRef.current = setInterval(() => {
       const s = stateRef.current;
       if (!s.playing || s.gate || s.pendingDecision) return;
       const nextProgress = s.progress + BASE_PROGRESS_PER_TICK * s.speed;
       if (nextProgress >= 1) {
-        setState((cur) => ({ ...cur, pendingDecision: true }));
+        // Check lock: don't send a new request if one is already in flight for this checkpoint
+        if (decisionLock.current !== s.stepIndex) {
+          decisionLock.current = s.stepIndex;
+          // Request authoritative backend decision before advancing
+          const decisionPayload: StateSummary = {
+            robotId: scenario.leadRobot,
+            currentCell: scenario.leadRobot,
+            heading: "north",
+            checkpointIndex: s.stepIndex + 1,
+            totalCheckpoints: scenario.steps.length,
+            availableRoutes: [],
+            restrictedZones: [],
+            remainingBudgetAtomic: "0",
+            scenarioHints: [],
+            seed: "DABBAWALA_2026_SEED_42",
+          };
+          triggerMissionDecision(decisionPayload).then((backendDecision) => {
+            // Clear the lock when decision returns
+            decisionLock.current = null;
+            setState((cur) => {
+              pendingDecision = false;
+              return advanceStep(cur, backendDecision);
+            });
+          });
+        }
       } else {
         setState((cur) => ({ ...cur, progress: nextProgress }));
       }
@@ -224,7 +251,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [advanceStep, scenario, ogUp]);
+  }, [advanceStep, scenario, ogUp, decisionLock]);
 
   // Gate countdown.
   useEffect(() => {
