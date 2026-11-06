@@ -1,9 +1,5 @@
 "use client";
 
-// "The Line" — the scenario drawer (slide-over, left). 10 dispatch test
-// cases grouped into chapters like a railway timetable. Includes the
-// 600ms Surprise-Me highlight cycle (instant under reduced motion).
-
 import { useCallback, useRef, useState } from "react";
 import { SCENARIOS } from "../data/scenarios";
 import type { ScenarioTestCase } from "../data/types";
@@ -32,9 +28,23 @@ type ScenarioDrawerProps = {
   reducedMotion: boolean;
 };
 
+function createSeededRandom(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return function() {
+    hash = (hash * 1664525 + 1013904223) >>> 0;
+    return hash / 0x100000000;
+  };
+}
+
 export default function ScenarioDrawer({ open, selected, onSelect, onClose, reducedMotion }: ScenarioDrawerProps) {
   const [flashId, setFlashId] = useState<string | null>(null);
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [generatedOutcome, setGeneratedOutcome] = useState<string | null>(null);
+  const [showOutcomeModal, setShowOutcomeModal] = useState(false);
 
   const surpriseMe = useCallback(() => {
     if (cycleRef.current) clearInterval(cycleRef.current);
@@ -54,6 +64,30 @@ export default function ScenarioDrawer({ open, selected, onSelect, onClose, redu
       }
     }, 60);
   }, [onSelect, reducedMotion]);
+
+  const generateRandomTest = useCallback(() => {
+    const seed = `DABBAWALA_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const rand = createSeededRandom(seed);
+    
+    const scenario = SCENARIOS[Math.floor(rand() * SCENARIOS.length)];
+    
+    const outcomes = {
+      "Integration": ["DELIVERED", "REROUTED", "HALTED"],
+      "0G": ["DELIVERED", "REROUTED", "HALTED", "SAFE-STOP"],
+      "Hedera": ["DELIVERED", "REFUSED", "HALTED"],
+      "ENS": ["DELIVERED", "REFUSED", "DENIED"],
+    };
+    
+    const possibleOutcomes = outcomes[scenario.track] || ["DELIVERED"];
+    const randomOutcome = possibleOutcomes[Math.floor(rand() * possibleOutcomes.length)];
+    
+    setGeneratedOutcome(`${scenario.id} → ${randomOutcome}`);
+    setShowOutcomeModal(true);
+    
+    setTimeout(() => setShowOutcomeModal(false), 3000);
+    
+    onSelect(scenario);
+  }, [onSelect]);
 
   return (
     <div
@@ -144,7 +178,30 @@ export default function ScenarioDrawer({ open, selected, onSelect, onClose, redu
         >
           Surprise Me
         </button>
+        <button
+          onClick={generateRandomTest}
+          className="px-4 py-2 bg-[#0F5257] text-[#F2EADB] border-2 border-[#14110F] uppercase tracking-wider text-xs font-extrabold hover:shadow-[3.5px_3.5px_0_#14110F] active:shadow-[0.5px_0.5px_0_#14110F] active:translate-x-[2px] active:translate-y-[2px] transition-all shrink-0"
+          style={{ fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "2.5px 2.5px 0 #14110F" }}
+        >
+          Random Test
+        </button>
       </div>
+
+      {showOutcomeModal && (
+        <div className="fixed inset-0 z-50 bg-[#14110F]/75 flex items-center justify-center p-4 backdrop-blur-[2px]">
+          <div className="bg-[#F2EADB] border-2 border-[#14110F] shadow-[4px_4px_0_#14110F] p-6 text-center space-y-3">
+            <div className="font-bold text-xl text-[#14110F]" style={{ fontFamily: "'Instrument Serif', serif" }}>
+              Random Test Generated
+            </div>
+            <div className="bg-[#FFC20E] text-[#14110F] font-mono text-sm px-4 py-2 border-2 border-[#14110F] font-extrabold">
+              {generatedOutcome}
+            </div>
+            <p className="text-xs text-[#14110F]/70 font-mono">
+              Click on the scenario to load it
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
