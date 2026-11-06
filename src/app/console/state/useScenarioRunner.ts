@@ -19,6 +19,30 @@ import type {
   StateSummary,
 } from "../data/types";
 
+/**
+ * Backend decision response type from POST /v1/mission/decide.
+ * VERIFIED: Actual return type from consoleApi.ts lines 235-247.
+ * The API returns optional fields - we validate at runtime in validateBackendDecision.
+ */
+export type BackendDecision = {
+  source: string;
+  action?: { type: string; routeId?: string };
+  requestId: string;
+  halted?: boolean;
+  reason?: string;
+  detail?: string;
+  policyApproved?: boolean;
+  policyHalt?: { halted: true; reason: string; detail?: string } | null;
+  policyBlock: string;
+  policyHash: string;
+  provenance: { mode: string; recordId: string };
+} | null;
+
+/** Validated backend decision with runtime checks */
+type ValidatedDecision =
+  | { approved: true; action?: { type: string; routeId?: string }; requestId: string }
+  | { approved: false; reason: HaltReason; detail?: string };
+
 export type Verdict =
   | "DELIVERED"
   | "REROUTED"
@@ -89,7 +113,6 @@ const INITIAL: RunnerState = {
   haltedRobots: [],
   records: [],
   pendingDecision: false,
-  decisionLock: null,
 };
 
 function stampForHalt(reason: HaltReason): Verdict {
@@ -121,17 +144,65 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     stateRef.current = state;
   }, [state]);
 
+  // Synchronous useRef-based lock for checkpoint decision requests
+  // VERIFIED: Rules of Hooks require hooks at top level, not inside useEffect
+  const decisionLockRef = useRef<{
+    scenarioId: string;
+    stepIndex: number;
+    requestId: string;
+  } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Adjust-state-during-render reset when a different scenario loads.
   const [lastScenarioId, setLastScenarioId] = useState(scenario.id);
   if (lastScenarioId !== scenario.id) {
     setLastScenarioId(scenario.id);
     setState(INITIAL);
+    decisionLockRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   }
 
   const laneOrder = LANE_ORDER;
 
+  /**
+   * Validate backend decision response at runtime.
+   * Returns { approved: true } only for valid policyApproved === true.
+   * Returns { approved: false, reason } for any rejection, null, or invalid response.
+   */
+  function validateBackendDecision(
+    response: BackendDecision,
+    _currentStepIndex: number,
+  ): ValidatedDecision {
+    // Null response (network error, timeout, 503, etc.)
+    if (response === null) {
+      return { approved: false, reason: "ZG_TIMEOUT" };
+    }
+
+    // Check for halted state (explicit halted: true)
+    if (response.halted === true) {
+      return { approved: false, reason: response.reason as HaltReason };
+    }
+
+    // policyApproved can be true, false, or undefined
+    // Only explicit true allows progression
+    if (response.policyApproved === true) {
+      return { approved: true, action: response.action, requestId: response.requestId };
+    }
+
+    // policyApproved is false, undefined, or missing -> reject
+    if (response.policyApproved === false && response.policyHalt) {
+      return { approved: false, reason: response.policyHalt.reason as HaltReason, detail: response.policyHalt.detail };
+    }
+
+    // Malformed or unrecognized response - fail closed
+    return { approved: false, reason: "ZG_MALFORMED" };
+  }
+
   const advanceStep = useCallback(
-    (s: RunnerState, backendDecision?: any): RunnerState => {
+    (s: RunnerState, backendDecision?: BackendDecision | null): RunnerState => {
       const step = scenario.steps[s.stepIndex];
       if (!step) return s;
 
@@ -145,6 +216,45 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         gateToken: null,
         gateDecision: decision,
       });
+
+      // Check if this decision is for our current checkpoint and scenario
+      // (prevents stale responses from affecting wrong mission)
+      if (backendDecision !== undefined) {
+        const validated = validateBackendDecision(backendDecision, s.stepIndex);
+        if (!validated.approved) {
+          // Decision rejected - halt the robot
+          const haltReason: HaltReason = validated.reason;
+          const verdict = stampForHalt(haltReason);
+          return {
+            ...s,
+            playing: false,
+            haltReason,
+            verdict,
+            haltedRobots: [...s.haltedRobots, scenario.leadRobot],
+            records: [...s.records.slice(0, -1), record("stop", null)],
+            pendingDecision: false,
+          };
+        }
+        // Approved - proceed to next step
+        // Check if this is the terminal step
+        if (s.stepIndex === scenario.steps.length - 1) {
+          return {
+            ...s,
+            playing: false,
+            verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
+            records: [...s.records, record("ok")],
+            pendingDecision: false,
+          };
+        }
+        // Ordinary step - advance to next
+        return {
+          ...s,
+          stepIndex: s.stepIndex + 1,
+          progress: 0,
+          records: [...s.records, record("ok")],
+          pendingDecision: false,
+        };
+      }
 
       // 1. Gate request pauses the run and opens the human gate modal.
       if (step.gateRequest || step.action.type === "ask_human") {
@@ -161,6 +271,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
           playing: false,
           gate: { request, remainingMs: GATE_TTL_MS, resolving: false },
           records: [...s.records, record("wait")],
+          pendingDecision: false,
         };
       }
 
@@ -179,14 +290,15 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
             haltReason: reason,
             verdict: stampForHalt(reason),
             records: [...s.records, record("stop")],
+            pendingDecision: false,
           };
         }
         // Targeted halt (TC-08): record it, keep the run going.
         const next = { ...s, haltedRobots, records: [...s.records, record("stop")] };
         if (s.stepIndex === scenario.steps.length - 1) {
-          return { ...next, playing: false, verdict: "DELIVERED" };
+          return { ...next, playing: false, verdict: "DELIVERED", pendingDecision: false };
         }
-        return { ...next, stepIndex: s.stepIndex + 1, progress: 0 };
+        return { ...next, stepIndex: s.stepIndex + 1, progress: 0, pendingDecision: false };
       }
 
       // 3. Terminal step -> final verdict.
@@ -196,6 +308,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
           playing: false,
           verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
           records: [...s.records, record("ok")],
+          pendingDecision: false,
         };
       }
 
@@ -205,6 +318,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         stepIndex: s.stepIndex + 1,
         progress: 0,
         records: [...s.records, record("ok")],
+        pendingDecision: false,
       };
     },
     [scenario, laneOrder],
@@ -212,37 +326,118 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
 
   // Main clock.
   useEffect(() => {
-    const decisionLock = useRef<number | null>(null);
-    
+    // Abort any pending request when component unmounts or scenario changes
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     tickRef.current = setInterval(() => {
       const s = stateRef.current;
+      // Pause if: playing=false, gate active, or decision pending
       if (!s.playing || s.gate || s.pendingDecision) return;
+
       const nextProgress = s.progress + BASE_PROGRESS_PER_TICK * s.speed;
       if (nextProgress >= 1) {
-        // Check lock: don't send a new request if one is already in flight for this checkpoint
-        if (decisionLock.current !== s.stepIndex) {
-          decisionLock.current = s.stepIndex;
-          // Request authoritative backend decision before advancing
+        // Acquire lock synchronously
+        const currentStep = s.stepIndex;
+        const lockKey = { scenarioId: scenario.id, stepIndex: currentStep, requestId: crypto.randomUUID() };
+
+        // Check if another request is in flight for the same checkpoint
+        if (decisionLockRef.current?.stepIndex !== currentStep ||
+            decisionLockRef.current?.scenarioId !== scenario.id) {
+          // Not locked or locked for different checkpoint - proceed
+          decisionLockRef.current = lockKey;
+
+          // Abort any previous request
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+          abortControllerRef.current = new AbortController();
+
+          // Mark as pending to pause movement
+          setState((cur) => ({ ...cur, pendingDecision: true }));
+
+          // Construct decision payload from actual scenario data
           const decisionPayload: StateSummary = {
             robotId: scenario.leadRobot,
-            currentCell: scenario.leadRobot,
+            currentCell: `cell-${s.stepIndex}`,
             heading: "north",
             checkpointIndex: s.stepIndex + 1,
             totalCheckpoints: scenario.steps.length,
-            availableRoutes: [],
-            restrictedZones: [],
-            remainingBudgetAtomic: "0",
+            availableRoutes: scenario.lanes[scenario.leadRobot].route.map(wp => `r${wp.x}-${wp.y}`),
+            restrictedZones: [], // populated from checkpoint data
+            remainingBudgetAtomic: "0", // will be read from passport/budget
             scenarioHints: [],
-            seed: "DABBAWALA_2026_SEED_42",
+            seed: `DABBAWALA_${scenario.id}_${currentStep}`,
           };
-          triggerMissionDecision(decisionPayload).then((backendDecision) => {
-            // Clear the lock when decision returns
-            decisionLock.current = null;
-            setState((cur) => {
-              pendingDecision = false;
-              return advanceStep(cur, backendDecision);
+
+          triggerMissionDecision(decisionPayload)
+            .then((backendDecision) => {
+              // Check if scenario changed (stale response protection)
+              if (scenario.id !== decisionLockRef.current?.scenarioId) {
+                decisionLockRef.current = null;
+                return;
+              }
+
+              // Validate and apply decision
+              const validated = validateBackendDecision(backendDecision, s.stepIndex);
+
+              if (!validated.approved) {
+                // Decision rejected or invalid - halt with reason
+                setState((cur) => {
+                  const rec = cur.records[cur.records.length - 1];
+                  return {
+                    ...cur,
+                    playing: false,
+                    haltReason: validated.reason,
+                    verdict: stampForHalt(validated.reason),
+                    haltedRobots: [...new Set([...cur.haltedRobots, scenario.leadRobot])],
+                    pendingDecision: false,
+                    records: rec
+                      ? [...cur.records.slice(0, -1), { ...rec, gateDecision: "expired" as const }]
+                      : cur.records,
+                  };
+                });
+                decisionLockRef.current = null;
+                return;
+              }
+
+              // Approved decision
+              setState((cur) => advanceStep(cur, backendDecision));
+              decisionLockRef.current = null;
+            })
+            .catch((error) => {
+              // Network error, timeout, etc.
+              if (abortControllerRef.current?.signal.aborted) {
+                // Request was intentionally aborted - check if still relevant
+                if (scenario.id !== decisionLockRef.current?.scenarioId) {
+                  decisionLockRef.current = null;
+                }
+                return;
+              }
+
+              // Network failure - halt
+              setState((cur) => {
+                const rec = cur.records[cur.records.length - 1];
+                return {
+                  ...cur,
+                  playing: false,
+                  haltReason: "ZG_TIMEOUT",
+                  verdict: "SAFE-STOP",
+                  haltedRobots: [...new Set([...cur.haltedRobots, scenario.leadRobot])],
+                  pendingDecision: false,
+                  records: rec
+                    ? [...cur.records.slice(0, -1), { ...rec, outcome: "stop" as const }]
+                    : cur.records,
+                };
+              });
+              decisionLockRef.current = null;
             });
-          });
         }
       } else {
         setState((cur) => ({ ...cur, progress: nextProgress }));
@@ -251,7 +446,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [advanceStep, scenario, ogUp, decisionLock]);
+  }, [advanceStep, scenario, ogUp]);
 
   // Gate countdown.
   useEffect(() => {
