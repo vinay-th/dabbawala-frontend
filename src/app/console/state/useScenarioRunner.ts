@@ -75,6 +75,7 @@ type RunnerState = {
   haltReason: HaltReason | null;
   haltedRobots: RobotId[];
   records: StepRecord[];
+  pendingDecision: boolean;
 };
 
 const INITIAL: RunnerState = {
@@ -87,6 +88,7 @@ const INITIAL: RunnerState = {
   haltReason: null,
   haltedRobots: [],
   records: [],
+  pendingDecision: false,
 };
 
 function stampForHalt(reason: HaltReason): Verdict {
@@ -211,25 +213,10 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
   useEffect(() => {
     tickRef.current = setInterval(() => {
       const s = stateRef.current;
-      if (!s.playing || s.gate) return;
+      if (!s.playing || s.gate || s.pendingDecision) return;
       const nextProgress = s.progress + BASE_PROGRESS_PER_TICK * s.speed;
       if (nextProgress >= 1) {
-        // Request authoritative backend decision before advancing
-        const decisionPayload: StateSummary = {
-          robotId: scenario.leadRobot,
-          currentCell: `cell-${s.stepIndex}`,
-          heading: "north",
-          checkpointIndex: s.stepIndex + 1,
-          totalCheckpoints: scenario.steps.length,
-          availableRoutes: ["route-a", "route-b"],
-          restrictedZones: ["churchgate", "dadar"],
-          remainingBudgetAtomic: "5000",
-          scenarioHints: [],
-          seed: "DABBAWALA_2026_SEED_42",
-        };
-        triggerMissionDecision(decisionPayload).then((backendDecision) => {
-          setState((cur) => advanceStep(cur, backendDecision));
-        });
+        setState((cur) => ({ ...cur, pendingDecision: true }));
       } else {
         setState((cur) => ({ ...cur, progress: nextProgress }));
       }
