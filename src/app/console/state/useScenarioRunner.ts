@@ -8,7 +8,7 @@
 // data is SIMULATED demo data until ROADMAP Phase B.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { submitGateDecision } from "../services/consoleApi";
+import { submitGateDecision, triggerMissionDecision } from "../services/consoleApi";
 import type {
   GateRequest,
   HaltReason,
@@ -16,6 +16,7 @@ import type {
   RobotLane,
   RouteWaypoint,
   ScenarioTestCase,
+  StateSummary,
 } from "../data/types";
 
 export type Verdict =
@@ -127,7 +128,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
   const laneOrder = LANE_ORDER;
 
   const advanceStep = useCallback(
-    (s: RunnerState): RunnerState => {
+    (s: RunnerState, backendDecision?: any): RunnerState => {
       const step = scenario.steps[s.stepIndex];
       if (!step) return s;
 
@@ -213,7 +214,22 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
       if (!s.playing || s.gate) return;
       const nextProgress = s.progress + BASE_PROGRESS_PER_TICK * s.speed;
       if (nextProgress >= 1) {
-        setState((cur) => advanceStep(cur));
+        // Request authoritative backend decision before advancing
+        const decisionPayload: StateSummary = {
+          robotId: scenario.leadRobot,
+          currentCell: `cell-${s.stepIndex}`,
+          heading: "north",
+          checkpointIndex: s.stepIndex + 1,
+          totalCheckpoints: scenario.steps.length,
+          availableRoutes: ["route-a", "route-b"],
+          restrictedZones: ["churchgate", "dadar"],
+          remainingBudgetAtomic: "5000",
+          scenarioHints: [],
+          seed: "DABBAWALA_2026_SEED_42",
+        };
+        triggerMissionDecision(decisionPayload).then((backendDecision) => {
+          setState((cur) => advanceStep(cur, backendDecision));
+        });
       } else {
         setState((cur) => ({ ...cur, progress: nextProgress }));
       }
@@ -221,7 +237,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [advanceStep]);
+  }, [advanceStep, scenario, ogUp]);
 
   // Gate countdown.
   useEffect(() => {

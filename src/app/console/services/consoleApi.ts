@@ -220,15 +220,36 @@ export async function loadBackendReadiness(): Promise<BackendReadiness | null> {
 
 /** POST /v1/mission/decide -> Trigger 0G Decision Checkpoint */
 export async function triggerMissionDecision(
-  scenarioId: string,
-  robotId?: RobotId,
-  challenge: "none" | "0g_unavailable" | "stale_telemetry" | "policy_denied" | "policy_paused" = "none",
-): Promise<any> {
+  stateSummary: {
+    robotId: string;
+    currentCell: string;
+    heading: string;
+    checkpointIndex: number;
+    totalCheckpoints: number;
+    availableRoutes: readonly string[];
+    restrictedZones: readonly string[];
+    remainingBudgetAtomic: string;
+    scenarioHints: readonly string[];
+    seed: string;
+  },
+): Promise<{
+  source: string;
+  action?: { type: string; routeId?: string };
+  requestId: string;
+  halted?: boolean;
+  reason?: string;
+  detail?: string;
+  policyApproved?: boolean;
+  policyHalt?: { halted: true; reason: string; detail?: string } | null;
+  policyBlock: string;
+  policyHash: string;
+  provenance: { mode: string; recordId: string };
+} | null> {
   try {
     const res = await fetchWithTimeout(`${API_BASE_URL}/mission/decide`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenarioId, robotId, challenge }),
+      body: JSON.stringify(stateSummary),
     });
     if (res.ok) {
       return await res.json();

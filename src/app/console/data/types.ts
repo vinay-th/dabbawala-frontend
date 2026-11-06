@@ -109,3 +109,16 @@ export interface RobotPassport {
   block: { number: number; hash: string; scannedAtMs: number };
   source: "sim" | "live";
 }
+
+export type StateSummary = {
+  readonly robotId: RobotId;
+  readonly currentCell: string;
+  readonly heading: string;
+  readonly checkpointIndex: number;
+  readonly totalCheckpoints: number;
+  readonly availableRoutes: readonly string[];
+  readonly restrictedZones: readonly string[];
+  readonly remainingBudgetAtomic: string;
+  readonly scenarioHints: readonly string[];
+  readonly seed: string;
+};
