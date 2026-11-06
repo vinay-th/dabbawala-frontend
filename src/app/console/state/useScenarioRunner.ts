@@ -1,17 +1,20 @@
 "use client";
 
-// Simulation runner for the /console demo board. This is a DETERMINISTIC
-// replay engine over the static scenario data in ../data/scenarios.ts:
-// the same scenario + seed always produces the same frames (ROADMAP test R1).
-// It models the Policy Gate outcomes (approve, deny, halt, outage) but does
-// NOT contact any network — every proof shown here is SIMULATED demo data.
-// Real 0G / Hedera / ENS integration lands in Phase B, not in this file.
+// Deterministic replay engine for the /console board (v2).
+// Every scenario carries three robot lanes; this engine advances all three
+// along their own polylines on one shared step clock, resolves gates
+// through the consoleApi service boundary (the future backend swap point),
+// and fails closed on 0G outage. No network I/O happens today: all proof
+// data is SIMULATED demo data until ROADMAP Phase B.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { submitGateDecision } from "../services/consoleApi";
 import type {
   GateRequest,
   HaltReason,
   RobotId,
+  RobotLane,
+  RouteWaypoint,
   ScenarioTestCase,
 } from "../data/types";
 
@@ -25,14 +28,16 @@ export type Verdict =
 
 export type RobotRuntime = {
   id: RobotId;
-  progress: number; // 0..1 along its current leg
+  pos: { x: number; y: number };
   state: "idle" | "moving" | "checkpoint" | "halted" | "delivered";
   callout: string | null;
+  progress: number;
 };
 
 export type GateSession = {
   request: GateRequest;
   remainingMs: number;
+  resolving: boolean;
 };
 
 export type StepRecord = {
@@ -45,8 +50,9 @@ export type StepRecord = {
 
 const TICK_MS = 50;
 const BASE_PROGRESS_PER_TICK = 0.012; // 1x -> ~4.2s per leg
-const GATE_TTL_MS = 60_000; // token TTL <= 60s (invariant 7)
-const ROBOT_LAG = 0.18; // convoy stagger between robots (progress units)
+const GATE_TTL_MS = 60_000; // token TTL <= 60s (ROADMAP invariant 7)
+const CONVOY_LAG = 0.05; // progress stagger between robots
+const LANE_ORDER: RobotId[] = ["ramu", "sakhu", "janu"];
 
 const HALT_STAMP: Record<string, Verdict> = {
   ZG_TIMEOUT: "SAFE-STOP",
@@ -58,23 +64,15 @@ const HALT_STAMP: Record<string, Verdict> = {
   GATE_DENIED: "DENIED",
 };
 
-const CALLOUT_BY_ACTION: Record<string, string> = {
-  "hedera_payment": "⚡ Paying 0.002 HBAR",
-  "ens_policy": "🛂 ENS Policy Read",
-  "human_gate": "🛑 Zone R-2 Halt Flag",
-  "relay": "📦 Handoff Sync",
-  "delivery": "🏁 Delivering",
-};
-
 type RunnerState = {
   stepIndex: number;
-  progress: number; // lead robot progress along current leg
+  progress: number; // 0..1 along the current step
   playing: boolean;
   speed: 1 | 2 | 4;
   gate: GateSession | null;
   verdict: Verdict | null;
   haltReason: HaltReason | null;
-  halted: boolean;
+  haltedRobots: RobotId[];
   records: StepRecord[];
 };
 
@@ -86,7 +84,7 @@ const INITIAL: RunnerState = {
   gate: null,
   verdict: null,
   haltReason: null,
-  halted: false,
+  haltedRobots: [],
   records: [],
 };
 
@@ -94,29 +92,49 @@ function stampForHalt(reason: HaltReason): Verdict {
   return HALT_STAMP[reason] ?? "HALTED";
 }
 
+/** Linear position along a polyline at parametric position u in [0,1]. */
+export function pointAlong(route: RouteWaypoint[], u: number): { x: number; y: number } {
+  if (route.length === 0) return { x: 0, y: 0 };
+  if (route.length === 1) return { x: route[0].x, y: route[0].y };
+  const t = Math.min(1, Math.max(0, u)) * (route.length - 1);
+  const i = Math.min(route.length - 2, Math.floor(t));
+  const f = t - i;
+  return {
+    x: route[i].x + (route[i + 1].x - route[i].x) * f,
+    y: route[i].y + (route[i + 1].y - route[i].y) * f,
+  };
+}
+
+export function laneToPathD(route: RouteWaypoint[]): string {
+  return route.map((wp, i) => `${i === 0 ? "M" : "L"} ${wp.x} ${wp.y}`).join(" ");
+}
+
 export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
   const [state, setState] = useState<RunnerState>(INITIAL);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Ref mirror so the interval callback reads fresh state without re-subscribing.
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  // Reset whenever a different scenario is loaded (adjust-state-during-render
-  // pattern instead of setState-in-effect).
+  // Adjust-state-during-render reset when a different scenario loads.
   const [lastScenarioId, setLastScenarioId] = useState(scenario.id);
   if (lastScenarioId !== scenario.id) {
     setLastScenarioId(scenario.id);
     setState(INITIAL);
   }
 
+  const laneOrder = LANE_ORDER;
+
   const advanceStep = useCallback(
     (s: RunnerState): RunnerState => {
       const step = scenario.steps[s.stepIndex];
       if (!step) return s;
 
-      const record = (outcome: StepRecord["outcome"], decision: StepRecord["gateDecision"] = null): StepRecord => ({
+      const record = (
+        outcome: StepRecord["outcome"],
+        decision: StepRecord["gateDecision"] = null,
+      ): StepRecord => ({
         stepIndex: s.stepIndex,
         checkpointId: step.checkpointId,
         outcome,
@@ -128,7 +146,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
       if (step.gateRequest || step.action.type === "ask_human") {
         const request: GateRequest = step.gateRequest ?? {
           id: `gr-auto-${s.stepIndex}`,
-          robotId: scenario.activeRobots[0],
+          robotId: scenario.leadRobot,
           zoneId: step.action.type === "ask_human" ? step.action.zoneId : "R-2",
           nonce: `n-${scenario.id}-${s.stepIndex}`,
           ttlMs: GATE_TTL_MS,
@@ -137,22 +155,34 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         return {
           ...s,
           playing: false,
-          gate: { request, remainingMs: GATE_TTL_MS },
+          gate: { request, remainingMs: GATE_TTL_MS, resolving: false },
           records: [...s.records, record("wait")],
         };
       }
 
-      // 2. Halt action (cap, budget, pause, outage) ends the run with a stamp.
+      // 2. Halt action. A haltTarget stops only that robot; the fleet may
+      // continue (TC-08). Otherwise the whole run halts with a stamp.
       if (step.action.type === "halt") {
         const reason = step.action.reason;
-        return {
-          ...s,
-          playing: false,
-          halted: true,
-          haltReason: reason,
-          verdict: stampForHalt(reason),
-          records: [...s.records, record("stop")],
-        };
+        const target = step.haltTarget ?? scenario.leadRobot;
+        const haltedRobots = [...new Set([...s.haltedRobots, target])];
+        const fleetHalted = scenario.leadRobot === target || haltedRobots.length >= laneOrder.length;
+        if (fleetHalted) {
+          return {
+            ...s,
+            playing: false,
+            haltedRobots,
+            haltReason: reason,
+            verdict: stampForHalt(reason),
+            records: [...s.records, record("stop")],
+          };
+        }
+        // Targeted halt (TC-08): record it, keep the run going.
+        const next = { ...s, haltedRobots, records: [...s.records, record("stop")] };
+        if (s.stepIndex === scenario.steps.length - 1) {
+          return { ...next, playing: false, verdict: "DELIVERED" };
+        }
+        return { ...next, stepIndex: s.stepIndex + 1, progress: 0 };
       }
 
       // 3. Terminal step -> final verdict.
@@ -173,7 +203,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         records: [...s.records, record("ok")],
       };
     },
-    [scenario],
+    [scenario, laneOrder],
   );
 
   // Main clock.
@@ -181,7 +211,6 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     tickRef.current = setInterval(() => {
       const s = stateRef.current;
       if (!s.playing || s.gate) return;
-
       const nextProgress = s.progress + BASE_PROGRESS_PER_TICK * s.speed;
       if (nextProgress >= 1) {
         setState((cur) => advanceStep(cur));
@@ -199,18 +228,18 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     if (!state.gate) return;
     const id = setInterval(() => {
       setState((cur) => {
-        if (!cur.gate) return cur;
+        if (!cur.gate || cur.gate.resolving) return cur;
         const remainingMs = cur.gate.remainingMs - 1000;
         if (remainingMs <= 0) {
           const rec = cur.records[cur.records.length - 1];
           return {
             ...cur,
             gate: null,
-            halted: true,
+            haltedRobots: [...new Set([...cur.haltedRobots, cur.gate.request.robotId])],
             haltReason: "APPROVAL_EXPIRED",
             verdict: "HALTED",
             records: rec
-              ? [...cur.records.slice(0, -1), { ...rec, gateDecision: "expired" }]
+              ? [...cur.records.slice(0, -1), { ...rec, gateDecision: "expired" as const }]
               : cur.records,
           };
         }
@@ -220,8 +249,8 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     return () => clearInterval(id);
   }, [state.gate !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 0G outage: fail closed mid-run (invariant 4). Resume requires 0G back
-  // plus a fresh play() which simulates a fresh 0G call + policy read.
+  // 0G outage: fail closed mid-run (ROADMAP invariant 4). Resume requires
+  // 0G restored plus a fresh play() (fresh call + fresh policy read).
   const outageRef = useRef(ogUp);
   useEffect(() => {
     const wasUp = outageRef.current;
@@ -233,7 +262,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         return {
           ...cur,
           playing: false,
-          halted: true,
+          haltedRobots: laneOrder.slice(),
           haltReason: "ZG_TIMEOUT",
           verdict: "SAFE-STOP",
           records: rec
@@ -244,15 +273,15 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         };
       });
     }
-  }, [ogUp]);
+  }, [ogUp, laneOrder]);
 
   // Controls -------------------------------------------------------------
   const play = useCallback(() => {
     setState((cur) => {
-      // Resume after halt only when 0G is back (fresh call + policy read).
-      if (cur.halted && !ogUp) return cur;
-      if (cur.verdict && cur.halted && ogUp) {
-        return { ...cur, playing: true, halted: false, verdict: null, haltReason: null };
+      if (cur.haltedRobots.length > 0 && !ogUp) return cur; // still no 0G
+      if (cur.verdict && cur.haltedRobots.length > 0 && ogUp) {
+        // Resume: fresh 0G call + fresh policy read (simulated).
+        return { ...cur, playing: true, haltedRobots: [], verdict: null, haltReason: null };
       }
       if (cur.verdict) return cur; // run finished; reset to replay
       return { ...cur, playing: true };
@@ -278,7 +307,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         ...cur,
         stepIndex,
         progress: 0,
-        halted: false,
+        haltedRobots: [],
         verdict: null,
         haltReason: null,
         records: cur.records.filter((r) => r.stepIndex < stepIndex),
@@ -292,76 +321,86 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     setState((cur) => ({ ...cur, speed }));
   }, []);
 
-  const resolveGate = useCallback((decision: "approved" | "denied") => {
-    setState((cur) => {
-      if (!cur.gate) return cur;
-      const rec = cur.records[cur.records.length - 1];
-      const stamped: StepRecord | null = rec
-        ? {
-            ...rec,
-            gateDecision: decision,
-            gateToken:
-              decision === "approved"
-                ? `tok-${cur.gate.request.nonce}-${cur.gate.request.id}`
-                : null,
-          }
-        : null;
+  // Gate resolution goes through the service boundary (future backend
+  // enforces the approver allowlist and mints the single-use token).
+  const resolveGate = useCallback(
+    async (decision: "approved" | "denied") => {
+      const gate = stateRef.current.gate;
+      if (!gate || gate.resolving) return;
+      setState((cur) => (cur.gate ? { ...cur, gate: { ...cur.gate, resolving: true } } : cur));
 
-      if (decision === "denied") {
-        return {
+      const receipt = await submitGateDecision(gate.request, decision);
+
+      setState((cur) => {
+        if (!cur.gate) return cur;
+        const rec = cur.records[cur.records.length - 1];
+        const stamped: StepRecord | null = rec
+          ? {
+              ...rec,
+              gateDecision: decision,
+              gateToken: receipt.token,
+            }
+          : null;
+        const cleared = {
           ...cur,
           gate: null,
-          halted: true,
-          haltReason: "GATE_DENIED",
-          verdict: "DENIED",
           records: stamped ? [...cur.records.slice(0, -1), stamped] : cur.records,
         };
-      }
 
-      // Approved: single-use token minted; run resumes (or completes if last step).
-      const cleared = { ...cur, gate: null, records: stamped ? [...cur.records.slice(0, -1), stamped] : cur.records };
-      if (cur.stepIndex === scenario.steps.length - 1) {
-        return {
-          ...cleared,
-          playing: false,
-          verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
-        };
-      }
-      return { ...cleared, playing: true, stepIndex: cur.stepIndex + 1, progress: 0 };
-    });
-  }, [scenario]);
+        if (decision === "denied") {
+          return {
+            ...cleared,
+            haltedRobots: [...new Set([...cur.haltedRobots, cur.gate.request.robotId])],
+            haltReason: "GATE_DENIED",
+            verdict: "DENIED",
+          };
+        }
+        if (cur.stepIndex === scenario.steps.length - 1) {
+          return {
+            ...cleared,
+            playing: false,
+            verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
+          };
+        }
+        return { ...cleared, playing: true, stepIndex: cur.stepIndex + 1, progress: 0 };
+      });
+    },
+    [scenario],
+  );
 
-  // Derived robot runtimes: lead follows progress; convoy robots lag by ROBOT_LAG.
-  const robots: RobotRuntime[] = scenario.activeRobots.map((id, idx) => {
-    const lag = idx * ROBOT_LAG;
-    const p = Math.max(0, state.progress - lag);
-    const lastRecord = state.records[state.records.length - 1];
-    const leadStep = scenario.steps[state.stepIndex];
+  // Derived robot runtimes: each robot rides its own lane.
+  const lanes: RobotLane[] = laneOrder.map((id) => scenario.lanes[id]);
+  const totalSteps = scenario.steps.length;
+  const robots: RobotRuntime[] = lanes.map((lane, idx) => {
+    const lag = idx * CONVOY_LAG;
+    const rawU = (state.stepIndex + state.progress) / Math.max(1, totalSteps);
+    const u = Math.max(0, rawU - lag);
+    const pos = pointAlong(lane.route, u);
+    const calloutIdx = Math.min(state.stepIndex, lane.stepCallouts.length - 1);
+    const callout = calloutIdx >= 0 ? lane.stepCallouts[calloutIdx] : null;
+    const isHalted = state.haltedRobots.includes(lane.robotId);
+    const isLead = lane.robotId === scenario.leadRobot;
 
     let robotState: RobotRuntime["state"] = "idle";
-    let callout: string | null = null;
-
-    if (state.halted && idx === 0) {
+    if (isHalted) {
       robotState = "halted";
-      callout = state.haltReason ? `🛑 Halt: ${state.haltReason}` : "🛑 Halted";
     } else if (state.verdict === "DELIVERED" || state.verdict === "REROUTED") {
       robotState = "delivered";
-      callout = "✅ Delivered";
-    } else if (state.playing || p > 0) {
-      robotState = p >= 1 ? "checkpoint" : "moving";
-      if (leadStep) {
-        const cp = scenario.checkpoints.find((c) => c.id === leadStep.checkpointId);
-        callout = cp ? CALLOUT_BY_ACTION[cp.type] ?? null : null;
-      }
-      if (leadStep?.action.type === "reroute") callout = "📍 0G Route Verified";
-    } else if (state.gate) {
-      robotState = "checkpoint";
-      callout = "🛑 Awaiting Approver";
-    } else if (lastRecord) {
+    } else if (state.playing || u > 0) {
+      const atStepEnd = state.progress >= 1;
+      robotState = atStepEnd ? "checkpoint" : "moving";
+    } else if (state.gate && isLead) {
       robotState = "checkpoint";
     }
 
-    return { id, progress: p, state: robotState, callout };
+    // A fleet-wide stop shows on every robot; a targeted halt only on the
+    // halted one (TC-08: Ramu/Sakhu keep their normal callouts).
+    const displayCallout =
+      isHalted && (state.verdict !== null || isLead)
+        ? `🛑 ${state.haltReason ?? "HALTED"}`
+        : callout;
+
+    return { id: lane.robotId, pos, state: robotState, callout: displayCallout, progress: u };
   });
 
   return {
@@ -372,9 +411,12 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     gate: state.gate,
     verdict: state.verdict,
     haltReason: state.haltReason,
+    haltedRobots: state.haltedRobots,
     records: state.records,
     robots,
-    totalSteps: scenario.steps.length,
+    lanes,
+    leadLane: scenario.lanes[scenario.leadRobot],
+    totalSteps,
     controls: {
       play,
       pause,

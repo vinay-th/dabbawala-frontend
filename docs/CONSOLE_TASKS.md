@@ -69,6 +69,54 @@
 
 ---
 
+## V2 Rework (human-directed after Task 9 visual review)
+
+Goal: `ref/console.html` cartography is the quality bar; the board must be
+the wow factor with zero pan/zoom lag; all three robots act in every test
+case; keep the backend swap point explicit.
+
+### Task V2-1: Data model — per-robot lanes (`data/types.ts`, `data/scenarios.ts`)
+- [x] Add `RobotLane` (role, polyline route, per-step callouts) and `lanes: Record<RobotId, RobotLane>` to `ScenarioTestCase`.
+- [x] Add `leadRobot` and `haltTarget?: RobotId` (targeted halt: TC-08 stops Janu only).
+- [x] Add `RobotPassport` shape matching the future `GET /api/robots/:id/passport` response.
+- [x] Give all 10 scenarios lanes for Ramu, Sakhu and Janu with per-step callouts.
+- [x] *Acceptance:* every TC renders three robots narrating their own activity; zero `any`.
+
+### Task V2-2: Service layer (`services/consoleApi.ts`)
+- [x] Extract the endpoint boundary: `loadScenarios`, `loadScenario`, `loadPassport`, `submitGateDecision`, `loadEpisodeLog`.
+- [x] Document each against `docs/CONSOLE_ENDPOINTS.md` with `source: "sim" | "live"`.
+- [x] Runner resolves gate decisions through `submitGateDecision` (single swap point).
+- [x] *Acceptance:* no component calls data files directly except the service; `fetch` absent from bodies.
+
+### Task V2-3: Runner v2 (`state/useScenarioRunner.ts`)
+- [x] Polylines instead of checkpoint hops: `pointAlong` position per robot with convoy lag.
+- [x] Per-robot halts (`haltTarget`) with fleet-continue vs fleet-halt distinction.
+- [x] Async gate resolution through the service; resume only on fresh 0G + fresh policy read.
+- [x] *Acceptance:* TC-08 halts Janu while Ramu/Sakhu keep moving; TC-16 fails closed all three.
+
+### Task V2-4: Map rewrite (`components/MumbaiMap.tsx`, `MapRobots.tsx`)
+- [x] Full-bleed `slice` board, ref-grade cartography (sea + Marathi label + skyline, Western/Central rails + LOCAL train glyph, SV Canal waterlog, R-2 hazard hatch, enamel station plates, K1/K2, surveyor plat annotations).
+- [x] Lag fix: pan/zoom write the `<svg>` CSS `transform` imperatively via refs (GPU-composited); the board tree never re-renders on pointer movement; only the robot layer re-renders on runner ticks.
+- [x] Wheel zoom at cursor, zoom clamp 0.8–1.9, hairline zoom/recenter controls bottom-right.
+- [x] Ref-style tiffin tokens: aura + tactile shadow, ink core, label plate, speech bubble with tail (flips near board edge).
+- [x] *Acceptance:* pan/zoom smooth while playing; zooming out stays coherent.
+
+### Task V2-5: Shell components
+- [x] `ConsoleHeader`: landing-identical `TiffinMark` lockup wrapped in `Link href="/"` (separate "back to landing" button removed); level pill opens The Line.
+- [x] `ScenarioDrawer` / `InspectorDrawer`: slide-overs with `open`/`onClose` (board is full-bleed beneath).
+- [x] `FleetBadges` (new): bottom-left three badges with live status; click selects + opens receipt.
+- [x] `PlaybackControls`: floating bottom-center dispatch dock (The Line, DISPATCH primary, step/reset, speed, timeline).
+- [x] `ConsoleModals`: gate desk with countdown ring + stamp buttons, verdict overlay with Run Again / View Receipt, 0G vignette.
+- [x] *Acceptance:* shell floats over the board; drawers do not reflow the map.
+
+### Task V2-6: Page assembly & verification (`page.tsx`)
+- [x] Compose full-bleed layout with drawer open-state wiring (`onOpenTheLine`, robot select opens inspector).
+- [x] `npm run lint` → 0 errors, 0 warnings.
+- [x] `npm run build` → Next.js 16.4.3, `/console` static-prerendered.
+- [ ] Human visual check of v2 board (pan/zoom feel, all-3-robot movement). *(pending)*
+
+---
+
 ## Evidence
 
 - `npm run lint` → 0 errors, 0 warnings (10/31)

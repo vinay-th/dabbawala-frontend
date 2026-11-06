@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import PrimaryButton from './PrimaryButton';
 import TiffinMark from './TiffinMark';
 
@@ -8,6 +9,7 @@ interface NavHeaderProps {
 }
 
 export default function NavHeader({ onGoToFrame }: NavHeaderProps) {
+  const router = useRouter();
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 py-3.5 flex items-center justify-between border-b border-current/10 backdrop-blur-[2px]">
       {/* Wordmark */}
@@ -52,7 +54,7 @@ export default function NavHeader({ onGoToFrame }: NavHeaderProps) {
         >
           GitHub
         </a>
-        <PrimaryButton size="sm" onClick={() => onGoToFrame(0)}>
+        <PrimaryButton size="sm" onClick={() => router.push('/console')}>
           Launch app
         </PrimaryButton>
       </div>

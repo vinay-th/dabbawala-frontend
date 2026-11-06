@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import PrimaryButton from './PrimaryButton';
 import { EvidenceChip, IfItFails } from './UIAtoms';
 
@@ -21,6 +22,7 @@ function frameStyle(visible: boolean): React.CSSProperties {
 }
 
 export function Frame0Hero({ visible, onScroll }: FrameProps & { onScroll: () => void }) {
+  const router = useRouter();
   return (
     <section className={baseClass} style={frameStyle(visible)}>
       <div className="flex items-center gap-3 text-[11px] tracking-[0.14em] uppercase opacity-75 mb-3.5"
@@ -41,7 +43,7 @@ export function Frame0Hero({ visible, onScroll }: FrameProps & { onScroll: () =>
         and replayable decisions across Mumbai&apos;s urban grid.
       </p>
       <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-        <PrimaryButton size="md">
+        <PrimaryButton size="md" onClick={() => router.push('/console')}>
           Launch app
         </PrimaryButton>
         <button
@@ -321,6 +323,7 @@ export function Frame5Storage({ visible }: FrameProps) {
 }
 
 export function Frame6Closing({ visible }: FrameProps) {
+  const router = useRouter();
   return (
     <section className={baseClass} style={frameStyle(visible)}>
       <div className="relative z-10">
@@ -337,7 +340,7 @@ export function Frame6Closing({ visible }: FrameProps) {
           See a robot <em className="italic text-[#FFC20E]">refuse</em>.
         </h2>
         <div className="mb-6">
-          <PrimaryButton size="lg" shadow="#000" border="#000" borderWidth="2px">
+          <PrimaryButton size="lg" shadow="#000" border="#000" borderWidth="2px" onClick={() => router.push('/console')}>
             Launch app
           </PrimaryButton>
         </div>
