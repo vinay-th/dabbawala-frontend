@@ -44,6 +44,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Tailwind v4 dropped the global button-cursor reset; restore pointer for clickable controls */
+button,
+[role="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
 ::selection {
   background-color: var(--peeli-yellow);
   color: #000;

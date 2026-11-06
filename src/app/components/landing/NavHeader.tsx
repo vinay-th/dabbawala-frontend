@@ -1,5 +1,6 @@
 'use client';
 
+import PrimaryButton from './PrimaryButton';
 import TiffinMark from './TiffinMark';
 
 interface NavHeaderProps {
@@ -51,32 +52,9 @@ export default function NavHeader({ onGoToFrame }: NavHeaderProps) {
         >
           GitHub
         </a>
-        <button
-          className="bg-[#FFC20E] text-[#14110F] font-extrabold uppercase text-xs tracking-wider px-4 py-2 rounded-sm border-[1.5px] border-[#14110F]"
-          style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            boxShadow: '2.5px 2.5px 0px #14110F',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '3.5px 3.5px 0px #14110F';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = '';
-            (e.currentTarget as HTMLElement).style.boxShadow = '2.5px 2.5px 0px #14110F';
-          }}
-          onMouseDown={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'translate(2px,2px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '1px 1px 0px #14110F';
-          }}
-          onMouseUp={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '3.5px 3.5px 0px #14110F';
-          }}
-        >
+        <PrimaryButton size="sm" onClick={() => onGoToFrame(0)}>
           Launch app
-        </button>
+        </PrimaryButton>
       </div>
     </header>
   );

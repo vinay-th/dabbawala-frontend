@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
 // Fonts are loaded via Google Fonts <link> with the exact family names used by
 // ref/landing.html and DESIGN.md (Instrument Serif, Geist, Geist Mono,
 // Barlow Condensed, Tiro Devanagari Marathi). VERIFIED: same stylesheet URL as
@@ -28,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full theme-f0" suppressHydrationWarning>{children}</body>
-    </html>
+      <body className="min-h-full theme-f0" suppressHydrationWarning>
+    {children}
+  </body>
+    </html> 
   );
 }

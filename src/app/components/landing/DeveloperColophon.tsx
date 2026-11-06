@@ -22,18 +22,18 @@ const DEVELOPERS: Developer[] = [
     name: 'Vinay Thakor',
     role: 'Full Stack Web3 dev',
     links: [
-      { label: 'GitHub', href: '#' },
-      { label: 'X', href: '#' },
-      { label: 'LinkedIn', href: '#' },
+      { label: 'GitHub', href: 'https://github.com/vinay-th/' },
+      { label: 'X', href: 'https://x.com/code_with_vinay' },
+      { label: 'Portfolii', href: 'https://vinay-th.tech' },
     ],
   },
   {
     name: 'Niomi',
     role: 'Web3 dev',
     links: [
-      { label: 'GitHub', href: '#' },
+      { label: 'GitHub', href: 'https://github.com/nioomeee/' },
       { label: 'X', href: '#' },
-      { label: 'LinkedIn', href: '#' },
+      { label: 'Portfolio', href: 'https://niomi.me' },
     ],
   },
 ];
@@ -73,6 +73,7 @@ export default function DeveloperColophon() {
                   href={link.href}
                   className="text-[11px] uppercase tracking-wider opacity-75 underline underline-offset-4 decoration-1 transition-opacity hover:opacity-100 hover:text-[#FFC20E]"
                   style={{ fontFamily: "'Geist Mono', monospace" }}
+                  target="_blank" rel="noopener noreferrer"
                 >
                   {link.label}
                 </a>

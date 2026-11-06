@@ -1,5 +1,6 @@
 'use client';
 
+import PrimaryButton from './PrimaryButton';
 import { EvidenceChip, IfItFails } from './UIAtoms';
 
 interface FrameProps {
@@ -40,16 +41,9 @@ export function Frame0Hero({ visible, onScroll }: FrameProps & { onScroll: () =>
         and replayable decisions across Mumbai&apos;s urban grid.
       </p>
       <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-        <button
-          type="button"
-          className="bg-[#FFC20E] text-[#14110F] font-extrabold uppercase text-base tracking-wider px-6 py-2.5 rounded-sm border-[1.5px] border-[#14110F]"
-          style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            boxShadow: '2.5px 2.5px 0px #14110F',
-          }}
-        >
+        <PrimaryButton size="md">
           Launch app
-        </button>
+        </PrimaryButton>
         <button
           type="button"
           className="text-xs tracking-wider opacity-70 flex items-center gap-2 cursor-pointer hover:opacity-100"
@@ -343,15 +337,9 @@ export function Frame6Closing({ visible }: FrameProps) {
           See a robot <em className="italic text-[#FFC20E]">refuse</em>.
         </h2>
         <div className="mb-6">
-          <button
-            className="bg-[#FFC20E] text-[#14110F] font-extrabold uppercase text-lg tracking-wider px-8 py-3 rounded-sm border-2 border-black"
-            style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              boxShadow: '2.5px 2.5px 0px #000',
-            }}
-          >
+          <PrimaryButton size="lg" shadow="#000" border="#000" borderWidth="2px">
             Launch app
-          </button>
+          </PrimaryButton>
         </div>
         <div
           className="border-t border-white/15 pt-4 flex flex-col gap-2.5 text-[11px] text-[#F2EADB]/70"
