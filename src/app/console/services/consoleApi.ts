@@ -104,7 +104,17 @@ export async function loadPassport(robotId: RobotId): Promise<RobotPassport> {
     // Offline / dev fallback
   }
   const passport = PASSPORTS[robotId];
-  return { ...passport, block: { ...passport.block, scannedAtMs: Date.now() } };
+  // Ensure block.hash is NOT the valuesHash - they are separate:
+  // block.number = blockchain block number, block.hash = block hash (or synthetic)
+  // valuesHash = policy content hash, displayed separately
+  const fixedBlock = {
+    number: passport.block.number,
+    // Do NOT set hash to passport.valuesHash - they are different things.
+    // Use a synthetic block hash that is not the policy content hash.
+    hash: `0x${passport.block.number.toString(16).padStart(64, "0")}`,
+    scannedAtMs: Date.now(),
+  };
+  return { ...passport, block: fixedBlock };
 }
 
 export interface GateDecisionReceipt {
@@ -117,7 +127,10 @@ export interface GateDecisionReceipt {
 }
 
 /** POST /v1/gate/decide -> GateDecisionReceipt
- * Backend enforces the per-zone approver allowlist and mints single-use token. */
+ * Backend enforces the per-zone approver allowlist and mints single-use token.
+ * No static bearer credentials in the browser - the backend validates the
+ * approver identity and zone binding.
+ */
 export async function submitGateDecision(
   request: GateRequest,
   decision: "approved" | "denied",
@@ -127,7 +140,8 @@ export async function submitGateDecision(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        authorization: "Bearer sim-approver-all",
+        // No static bearer token - backend enforces allowlist via
+        // ZONE_APPROVERS config and approved-approver identity
       },
       body: JSON.stringify({ request, decision }),
     });
@@ -137,14 +151,15 @@ export async function submitGateDecision(
       return receipt as GateDecisionReceipt;
     }
   } catch {
-    // Offline / dev fallback
+    // Offline / dev fallback - fail closed, do not generate token locally
   }
 
+  // Fail closed: no token generation fallback
   return {
     requestId: request.id,
     decision,
-    token: decision === "approved" ? `tok-${request.nonce}-${request.id}` : null,
-    ttlMs: decision === "approved" ? request.ttlMs : 0,
+    token: null,
+    ttlMs: 0,
     decidedAtMs: Date.now(),
     source: "sim",
   };

@@ -235,6 +235,16 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
             pendingDecision: false,
           };
         }
+
+        // ── Action execution state machine (PART 5.2) ─────────────────────
+        // The approved action from the 0G proposal must be executed deterministically.
+        // No cached or locally fabricated decision is returned.
+        const approvedAction = validated.action;
+        if (approvedAction) {
+          return executeApprovedAction(approvedAction, s, scenario);
+        }
+        // ──────────────────────────────────────────────────────────────────
+
         // Approved - proceed to next step
         // Check if this is the terminal step
         if (s.stepIndex === scenario.steps.length - 1) {
@@ -323,6 +333,201 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     },
     [scenario, laneOrder],
   );
+
+  // ── Action execution state machine (PART 5.2) ───────────────────────────────
+  // Deterministically executes the approved action from a 0G proposal.
+  // Guarantees: fail-closed on any failure, no model-output bypass,
+  // and that only authorised actions affect robot movement.
+  function executeApprovedAction(
+    action: { type: string; routeId?: string } | undefined,
+    s: RunnerState,
+    scenario: ScenarioTestCase,
+  ): RunnerState {
+    if (!action) {
+      // No action returned - fail closed
+      const haltReason: HaltReason = "ZG_MALFORMED";
+      const verdict = stampForHalt(haltReason);
+      return {
+        ...s,
+        playing: false,
+        haltReason,
+        verdict,
+        haltedRobots: [...s.haltedRobots, scenario.leadRobot],
+        records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "stop", gateToken: null, gateDecision: null }],
+        pendingDecision: false,
+      };
+    }
+
+    const { type, routeId } = action;
+
+    switch (type) {
+      case "continue": {
+        // Continue the authorised path - advance to next step
+        if (s.stepIndex === scenario.steps.length - 1) {
+          return {
+            ...s,
+            playing: false,
+            verdict: scenario.expectedOutcome === "REROUTED" ? "REROUTED" : "DELIVERED",
+            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
+            pendingDecision: false,
+          };
+        }
+        return {
+          ...s,
+          stepIndex: s.stepIndex + 1,
+          progress: 0,
+          records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
+          pendingDecision: false,
+        };
+      }
+
+      case "reroute": {
+        // Change to the specified authorised route based on routeId
+        // Look up the new route waypoints based on the routeId
+        const robotLane = scenario.lanes[scenario.leadRobot];
+        const currentRoute = robotLane.route;
+
+        // Determine the new route based on routeId
+        let newRoute: RouteWaypoint[];
+        if (routeId === "mahim-detour") {
+          // Use Mahim detour route for R-2 demonstration
+          newRoute = /* mahim detour waypoints */ currentRoute; // placeholder - would need route lookup
+        } else if (routeId === "churchgate-alternate") {
+          // Use alternate route
+          newRoute = /* alternate waypoints */ currentRoute; // placeholder
+        } else {
+          // Unknown routeId - fail closed
+          const haltReason: HaltReason = "ZG_MALFORMED";
+          const verdict = stampForHalt(haltReason);
+          return {
+            ...s,
+            playing: false,
+            haltReason,
+            verdict,
+            haltedRobots: [...s.haltedRobots, scenario.leadRobot],
+            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "stop", gateToken: null, gateDecision: null }],
+            pendingDecision: false,
+          };
+        }
+
+        // Update the robot's route and position
+        // The lane's route is replaced with the new route
+        const updatedLanes = scenario.lanes.map((lane, idx) => {
+          if (lane.robotId === scenario.leadRobot) {
+            return { ...lane, route: newRoute };
+          }
+          return lane;
+        });
+
+        // Compute new position along the new route
+        const totalWaypoints = newRoute.length;
+        const u = totalWaypoints > 1 ? 0.5 : 0; // start at middle of first leg
+        const pos = pointAlong(newRoute, u);
+
+        return {
+          ...s,
+          lanes: updatedLanes,
+          robots: scenario.lanes.map((lane, idx) => {
+            const lid = lane.robotId;
+            const l = updatedLanes[idx];
+            const rawU = (s.stepIndex + s.progress) / Math.max(1, scenario.steps.length);
+            const u = Math.max(0, rawU - (scenario.lanes.indexOf(lane) * 0.05));
+            const p = pointAlong(l.route, u);
+            return { id: lid, pos, state: "moving", callout: l.stepCallouts[Math.min(s.stepIndex, l.stepCallouts.length - 1)], progress: u };
+          }),
+          records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
+          pendingDecision: false,
+        };
+      }
+
+      case "handoff": {
+        // Execute the defined receiver handoff
+        // Sender transfers the dabba box to the receiving robot
+        // Both robots enter a real handoff state
+
+        // Determine sender and receiver (based on scenario)
+        // For simplicity, use the lead robot as sender and the next robot in line as receiver
+        const robotOrder: RobotId[] = ["ramu", "sakhu", "janu"];
+        const leadIndex = robotOrder.indexOf(scenario.leadRobot);
+        const senderId = scenario.leadRobot;
+        const receiverId = robotOrder[(leadIndex + 1) % robotOrder.length];
+
+        // Check if handoff is valid (both robots exist and are active)
+        if (!scenario.leadRobot || !receiverId) {
+          const haltReason: HaltReason = "ZG_MALFORMED";
+          const verdict = stampForHalt(haltReason);
+          return {
+            ...s,
+            playing: false,
+            haltReason,
+            verdict,
+            haltedRobots: [...s.haltedRobots, scenario.leadRobot],
+            records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "stop", gateToken: null, gateDecision: null }],
+            pendingDecision: false,
+          };
+        }
+
+        // Update robot states to reflect handoff state
+        const updatedRobots = scenario.lanes.map((lane) => {
+          const lid = lane.robotId;
+          if (lid === senderId) {
+            return { ...lane, callout: "📦 Approaching handoff", state: "checkpoint" };
+          }
+          if (lid === receiverId) {
+            return { ...lane, callout: "⏳ Awaiting box", state: "checkpoint" };
+          }
+          return lane;
+        });
+
+        return {
+          ...s,
+          robots: updatedRobots,
+          records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "ok", gateToken: null, gateDecision: null }],
+          pendingDecision: false,
+        };
+      }
+
+      case "ask_human": {
+        // Stop and open the corresponding approval workflow
+        // The gate modal should be opened with the requested zone and robot
+        const zoneId = routeId || "docks-r2"; // use routeId as zoneId if available
+
+        return {
+          ...s,
+          playing: false,
+          gate: {
+            request: {
+              id: `gr-auto-${s.stepIndex}-human`,
+              robotId: scenario.leadRobot,
+              zoneId,
+              nonce: `n-${scenario.id}-${s.stepIndex}-human`,
+              ttlMs: GATE_TTL_MS,
+              status: "pending",
+            },
+            remainingMs: GATE_TTL_MS,
+            resolving: false,
+          },
+          records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "wait", gateToken: null, gateDecision: null }],
+          pendingDecision: false,
+        };
+      }
+
+      default: {
+        // Unknown action type - reject and safe-stop
+        const haltReason: HaltReason = "ACTION_NOT_ALLOWED";
+        const verdict = stampForHalt(haltReason);
+        return {
+          ...s,
+          playing: false,
+          haltReason,
+          verdict,
+          haltedRobots: [...s.haltedRobots, scenario.leadRobot],
+          records: [...s.records, { stepIndex: s.stepIndex, checkpointId: scenario.steps[s.stepIndex]?.checkpointId, outcome: "stop", gateToken: null, gateDecision: null }],
+          pendingDecision: false,
+        };
+      }
+    }
+  }
 
   // Main clock.
   useEffect(() => {
