@@ -1,0 +1,1061 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=1440, initial-scale=1.0" name="viewport">
+<title>DABBAWALA PROTOCOL — Central Dispatch Cartographic Console</title>
+<!-- Google Fonts: Instrument Serif, Geist, Geist Mono, Barlow Condensed, Tiro Devanagari Marathi -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&amp;family=Geist+Mono:wght@400;500;600&amp;family=Geist:wght@300;400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;family=Tiro+Devanagari+Marathi:ital@0;1&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "chai-paper": "#F2EADB",
+            "paper-shade": "#E6DBC3",
+            "paper-tint": "#FAF4E9",
+            "kaali-ink": "#14110F",
+            "peeli-yellow": "#FFC20E",
+            "signal-green": "#1F7A4D",
+            "best-red": "#D7261E",
+            "marine-teal": "#0F5257",
+            "tiffin-steel": "#C9CCCB",
+            "tiffin-steel-dark": "#A9ACAB",
+            "ledger-line": "rgba(20, 17, 15, 0.14)",
+            "ledger-subtle": "rgba(20, 17, 15, 0.05)"
+          },
+          fontFamily: {
+            "display-serif": ["Instrument Serif", "Georgia", "serif"],
+            "marathi": ["Tiro Devanagari Marathi", "serif"],
+            "sans": ["Geist", "-apple-system", "sans-serif"],
+            "mono": ["Geist Mono", "monospace"],
+            "condensed": ["Barlow Condensed", "sans-serif"]
+          },
+          boxShadow: {
+            "tactile": "3px 3px 0 0 #14110F",
+            "tactile-sm": "2px 2px 0 0 #14110F",
+            "tactile-press": "0.5px 0.5px 0 0 #14110F"
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    * {
+      border-radius: 0px !important;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 15px;
+      line-height: 1;
+    }
+    /* Calm Archival Watermark Grid (Matching Landing Page Cadastre & plat lines) */
+    .archival-canvas {
+      background-color: #F2EADB;
+      background-image: 
+        linear-gradient(to right, rgba(20, 17, 15, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(20, 17, 15, 0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    /* Hard button shadow per Landing Page */
+    .btn-hard-shadow {
+      box-shadow: 2.5px 2.5px 0px #14110F;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-hard-shadow:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3.5px 3.5px 0px #14110F;
+    }
+    .btn-hard-shadow:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0.5px 0.5px 0px #14110F;
+    }
+    /* Smooth custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 3px;
+      height: 3px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(20, 17, 15, 0.25);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #14110F;
+    }
+  </style>
+</head>
+<body class="bg-chai-paper text-kaali-ink w-screen h-screen overflow-hidden select-none flex flex-col font-sans text-xs antialiased selection:bg-peeli-yellow selection:text-kaali-ink">
+<!-- 1. FULL-BLEED 100VH TACTILE RAILWAY GAME BOARD -->
+<div class="relative w-screen h-screen overflow-hidden bg-chai-paper archival-canvas select-none" id="gameBoardContainer">
+<!-- Monsoon Slate Dusk Vignette for Safe-Stop Level 16 (Toggled dynamically) -->
+<div class="absolute inset-0 pointer-events-none transition-opacity duration-500 opacity-0 z-10" id="safeStopVignette" style="background: radial-gradient(circle, rgba(29, 42, 48, 0.15) 30%, rgba(29, 42, 48, 0.82) 100%);"></div>
+<!-- Background Technical Surveyor Ledger Stamp Annotations -->
+<div class="absolute top-20 left-8 font-mono text-[9px] tracking-widest opacity-25 uppercase flex flex-col gap-0.5 pointer-events-none z-0">
+<span class="">SURVEY PLAT 1890-B · WESTERN DIVISION</span>
+<span class="">BOMBAY CENTRAL ↔ CHURCHGATE ↔ ANDHERI [KM 18.4]</span>
+<span class="">GAUGE: BROAD 1676MM · CADASTRE SHEET #04</span>
+</div>
+<div class="absolute top-20 right-8 font-mono text-[9px] tracking-widest opacity-25 uppercase text-right flex flex-col gap-0.5 pointer-events-none z-0">
+<span class="">LAT 18°55'48" N · LON 72°49'38" E</span>
+<span class="">DAILY TIFFIN SORT RUN: 200,000 DABBIS</span>
+<span class="">SIGMA SIX ERROR MARGIN: 1 IN 16,000,000</span>
+</div>
+<!-- Full-Bleed Tactile Map SVG Canvas -->
+<div class="w-full h-full relative cursor-grab active:cursor-grabbing flex items-center justify-center pt-14 pb-14" id="mapInteractiveViewport">
+<svg class="w-full h-full object-cover transition-transform duration-300" id="boardSvg" preserveAspectRatio="xMidYMid slice" viewBox="0 0 1440 900">
+<defs>
+<pattern height="10" id="hatch-oxblood-game" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse" width="10">
+<line opacity="0.4" stroke="#D7261E" stroke-width="1.4" x1="0" x2="0" y1="0" y2="10"></line>
+</pattern>
+<!-- Filter for tactile drop shadow on robot avatars -->
+<filter height="150%" id="shadowTactileMap" width="150%" x="-20%" y="-20%">
+<feDropShadow dx="3" dy="3" flood-color="#14110F" stdDeviation="0"></feDropShadow>
+</filter>
+</defs>
+<!-- Atmospheric Arabian Sea Coastline & Faint Mumbai Skyline -->
+<g id="map-sea-coast">
+<path d="M 0,0 L 290,0 Q 330,220 280,450 T 260,710 Q 300,820 270,900 L 0,900 Z" fill="#E6DBC3" opacity="0.65"></path>
+<path d="M 290,0 Q 330,220 280,450 T 260,710 Q 300,820 270,900" fill="none" opacity="0.35" stroke="#14110F" stroke-dasharray="4,4" stroke-width="1.5"></path>
+<text fill="#14110F" font-family="'Tiro Devanagari Marathi', serif" font-size="34" letter-spacing="8" opacity="0.15" transform="rotate(-90 60 460)" x="60" y="460">अरबी समुद्र · ARABIAN SEA</text>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="10" letter-spacing="2" opacity="0.35" x="75" y="840">WESTERN HARBOUR ROADSTEAD // DEPTH 14M</text>
+<!-- Faint editorial Mumbai skyline contour -->
+<path d="M 20,890 L 20,850 L 35,850 L 35,820 L 45,790 L 55,820 L 55,850 L 90,850 L 90,830 L 110,830 L 110,870 L 140,870 L 140,810 L 155,780 L 170,810 L 170,880 L 220,880 L 220,890 Z" fill="none" opacity="0.12" stroke="#14110F" stroke-width="1"></path>
+</g>
+<!-- Railway Lines -->
+<g id="map-railways">
+<!-- Western Line (Double Steel & Red Ribbon) -->
+<path d="M 540,40 L 540,290 L 510,480 L 510,750 L 530,880" fill="none" opacity="0.75" stroke="#14110F" stroke-dasharray="7,5" stroke-width="4.5"></path>
+<path d="M 540,40 L 540,290 L 510,480 L 510,750 L 530,880" fill="none" stroke="#D7261E" stroke-width="1.8"></path>
+<!-- Central Line Branch Split -->
+<path d="M 510,480 Q 640,510 820,620 T 1020,780" fill="none" opacity="0.55" stroke="#14110F" stroke-dasharray="5,4" stroke-width="3"></path>
+<path d="M 510,480 Q 640,510 820,620 T 1020,780" fill="none" stroke="#0F5257" stroke-width="1.4"></path>
+<!-- Gliding Local Train Symbol -->
+<g transform="translate(537, 180)">
+<rect fill="#D7261E" height="52" rx="2" stroke="#14110F" stroke-width="1.5" width="14" x="-7" y="-26"></rect>
+<circle cx="0" cy="-16" fill="#FFC20E" r="2.5"></circle>
+<line stroke="#F2EADB" stroke-width="1.2" x1="-5" x2="5" y1="0" y2="0"></line>
+<text fill="#14110F" font-family="'Barlow Condensed', sans-serif" font-size="11" font-weight="700" letter-spacing="1" x="16" y="4">LOCAL #904 DOWN</text>
+</g>
+</g>
+<!-- Waterlogged SV Road Canal -->
+<g id="map-waterlog">
+<path d="M 480,560 C 560,540 660,580 760,550 S 910,530 1000,560" fill="none" opacity="0.2" stroke="#0F5257" stroke-linecap="round" stroke-width="14"></path>
+<path d="M 480,560 C 560,540 660,580 760,550 S 910,530 1000,560" fill="none" stroke="#0F5257" stroke-dasharray="5,4" stroke-width="1.8"></path>
+<rect fill="#0F5257" height="18" stroke="#14110F" stroke-width="1" width="160" x="610" y="542"></rect>
+<text fill="#F2EADB" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" letter-spacing="1" text-anchor="middle" x="690" y="555">WATERLOGGED: SV CANAL</text>
+</g>
+<!-- RESTRICTED ZONE R-2 (Military & Dock Perimeter) -->
+<g id="map-zoneR2">
+<polygon fill="url(#hatch-oxblood-game)" id="zoneR2Boundary" points="840,320 1180,320 1240,490 880,490" stroke="#D7261E" stroke-width="2"></polygon>
+<rect fill="#D7261E" height="24" stroke="#14110F" stroke-width="1.2" width="180" x="860" y="335"></rect>
+<text fill="#F2EADB" font-family="'Barlow Condensed', sans-serif" font-size="14" font-weight="700" letter-spacing="1.5" text-anchor="middle" x="950" y="351">RESTRICTED ZONE R-2</text>
+<text fill="#D7261E" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" x="865" y="378">HUMAN ESCORT SIGN-OFF MANDATED</text>
+</g>
+<!-- Dispatch Routes: Inactive Faint Hairlines vs Active Solid Peeli Yellow -->
+<g id="map-routes">
+<!-- Inactive Route Sakhu (Teal dashed) -->
+<path d="M 900,140 L 800,210 L 800,420 Q 740,480 530,600 L 530,760 L 720,840" fill="none" opacity="0.45" stroke="#0F5257" stroke-dasharray="4,4" stroke-width="1.5"></path>
+<!-- Inactive Route Janu (Monsoon Slate dashed) -->
+<path d="M 1120,180 L 1120,320 L 920,360 L 920,580 L 960,780" fill="none" opacity="0.35" stroke="#1D2A30" stroke-dasharray="4,4" stroke-width="1.5"></path>
+<!-- Active Route Ramu: SOLID PEELI YELLOW (Highlighted) -->
+<path d="M 650,130 L 650,230 L 540,270 L 510,480 L 510,750 L 630,830" fill="none" id="activeYellowRoute" stroke="#FFC20E" stroke-linecap="round" stroke-width="3.8"></path>
+</g>
+<!-- 8 Clear Stations & Checkpoints -->
+<g id="map-stations-checkpoints">
+<!-- 1. ANDHERI -->
+<g transform="translate(540, 140)">
+<rect fill="#F2EADB" filter="url(#shadowTactileMap)" height="30" stroke="#14110F" stroke-width="1.8" width="130" x="-65" y="-16"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed', sans-serif" font-size="16" font-weight="700" letter-spacing="1.5" text-anchor="middle" x="0" y="4">ANDHERI · ADH</text>
+<circle cx="0" cy="22" fill="#D7261E" r="3.5" stroke="#14110F" stroke-width="1"></circle>
+</g>
+<!-- Andheri Kitchen K1 -->
+<g transform="translate(650, 120)">
+<rect fill="#14110F" height="24" stroke="#F2EADB" stroke-width="1.2" width="24" x="-12" y="-12"></rect>
+<text fill="#F2EADB" font-family="'Geist Mono', monospace" font-size="10" font-weight="700" text-anchor="middle" x="0" y="4">K1</text>
+<text fill="#14110F" font-family="'Geist', sans-serif" font-size="11" font-weight="600" x="20" y="3">Andheri Kitchen</text>
+</g>
+<!-- 2. BANDRA -->
+<g transform="translate(510, 430)">
+<rect fill="#F2EADB" filter="url(#shadowTactileMap)" height="30" stroke="#14110F" stroke-width="1.8" width="130" x="-65" y="-16"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed', sans-serif" font-size="16" font-weight="700" letter-spacing="1.5" text-anchor="middle" x="0" y="4">BANDRA · BVI</text>
+<circle cx="0" cy="22" fill="#D7261E" r="3.5" stroke="#14110F" stroke-width="1"></circle>
+</g>
+<!-- 3. CHURCHGATE -->
+<g transform="translate(510, 750)">
+<rect fill="#F2EADB" filter="url(#shadowTactileMap)" height="30" stroke="#14110F" stroke-width="1.8" width="150" x="-75" y="-16"></rect>
+<text fill="#14110F" font-family="'Barlow Condensed', sans-serif" font-size="16" font-weight="700" letter-spacing="1.5" text-anchor="middle" x="0" y="4">CHURCHGATE · CCG</text>
+<circle cx="0" cy="22" fill="#D7261E" r="3.5" stroke="#14110F" stroke-width="1"></circle>
+</g>
+<!-- 4. COLABA GATE 4 -->
+<g transform="translate(630, 840)">
+<rect fill="#14110F" filter="url(#shadowTactileMap)" height="30" stroke="#FFC20E" stroke-width="2" width="140" x="-70" y="-15"></rect>
+<text fill="#FFC20E" font-family="'Barlow Condensed', sans-serif" font-size="16" font-weight="700" letter-spacing="1.5" text-anchor="middle" x="0" y="5">COLABA GATE 4</text>
+</g>
+<!-- Dropoff Mittal Towers -->
+<g transform="translate(790, 810)">
+<rect fill="#1F7A4D" height="20" stroke="#14110F" stroke-width="1.5" width="20" x="-10" y="-10"></rect>
+<text fill="#14110F" font-family="'Geist', sans-serif" font-size="11" font-weight="600" x="16" y="4">Mittal Towers [Dropoff]</text>
+</g>
+<!-- Checkpoint Signals CP1, CP2, CP3 -->
+<!-- CP1: Mahim Gate -->
+<g class="cursor-pointer" id="cpSignal1" onclick="inspectCheckpoint(1)" transform="translate(540, 270)">
+<polygon fill="#1F7A4D" points="0,-8 8,0 0,8 -8,0" stroke="#14110F" stroke-width="1.6"></polygon>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="700" x="14" y="4">CP1 · MAHIM [GREEN]</text>
+</g>
+<!-- CP2: Dadar Junction -->
+<g class="cursor-pointer" id="cpSignal2" onclick="inspectCheckpoint(2)" transform="translate(510, 590)">
+<polygon fill="#FFC20E" points="0,-8 8,0 0,8 -8,0" stroke="#14110F" stroke-width="1.6"></polygon>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="700" x="14" y="4">CP2 · DADAR [VERIFY]</text>
+</g>
+<!-- CP3: Zone R-2 Sentry Gate -->
+<g class="cursor-pointer" id="cpSignal3" onclick="inspectCheckpoint(3)" transform="translate(880, 360)">
+<polygon fill="#D7261E" points="0,-8 8,0 0,8 -8,0" stroke="#14110F" stroke-width="1.6"></polygon>
+<text fill="#D7261E" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="700" x="14" y="4">CP3 · SENTRY GATE [LOCK]</text>
+</g>
+</g>
+<!-- 56px GAMIFIED TIFFIN ROBOTS WITH CODE MARKS & SPEECH BUBBLES -->
+<g id="map-robots">
+<!-- ROBOT 1: RAMU (A·●·7) - ACTIVE & HIGHLIGHTED -->
+<g class="cursor-pointer transition-transform duration-300" id="gameRobotRamu" onclick="focusRobot('Ramu')" transform="translate(510, 680)">
+<!-- Outer Tactile Aura -->
+<circle cx="0" cy="0" fill="#FFC20E" filter="url(#shadowTactileMap)" r="28" stroke="#14110F" stroke-width="2.5"></circle>
+<!-- 4-Tier Tiffin Core Stamp -->
+<circle cx="0" cy="0" fill="#14110F" r="20"></circle>
+<text fill="#FFC20E" font-family="'Barlow Condensed', sans-serif" font-size="17" font-weight="800" text-anchor="middle" x="0" y="6">A7</text>
+<!-- Code Ring Label -->
+<rect fill="#F2EADB" height="16" stroke="#14110F" stroke-width="1.2" width="76" x="-38" y="-46"></rect>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9" font-weight="700" text-anchor="middle" x="0" y="-34">RAMU · A·●·7</text>
+<!-- Gamified Animated Speech Bubble -->
+<g transform="translate(36, -32)">
+<rect fill="#FAF4E9" filter="url(#shadowTactileMap)" height="28" rx="0" stroke="#14110F" stroke-width="1.5" width="145" x="0" y="-16"></rect>
+<polygon fill="#FAF4E9" points="-6,0 0,-5 0,5" stroke="#14110F" stroke-width="1.5"></polygon>
+<rect fill="#FAF4E9" height="8" width="3" x="-1" y="-4"></rect>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="600" id="ramuBubbleText" x="10" y="2">⚡ Paying 0.002 HBAR</text>
+</g>
+</g>
+<!-- ROBOT 2: SAKHU (B·●·2) - TEAL ACCENT -->
+<g class="cursor-pointer transition-transform duration-300" id="gameRobotSakhu" onclick="focusRobot('Sakhu')" transform="translate(740, 480)">
+<circle cx="0" cy="0" fill="#0F5257" filter="url(#shadowTactileMap)" r="28" stroke="#14110F" stroke-width="2.5"></circle>
+<circle cx="0" cy="0" fill="#F2EADB" r="20"></circle>
+<text fill="#0F5257" font-family="'Barlow Condensed', sans-serif" font-size="17" font-weight="800" text-anchor="middle" x="0" y="6">B2</text>
+<rect fill="#F2EADB" height="16" stroke="#14110F" stroke-width="1.2" width="76" x="-38" y="-46"></rect>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9" font-weight="700" text-anchor="middle" x="0" y="-34">SAKHU · B·●·2</text>
+<!-- Speech Bubble -->
+<g transform="translate(36, -32)">
+<rect fill="#FAF4E9" filter="url(#shadowTactileMap)" height="28" stroke="#14110F" stroke-width="1.5" width="138" x="0" y="-16"></rect>
+<polygon fill="#FAF4E9" points="-6,0 0,-5 0,5" stroke="#14110F" stroke-width="1.5"></polygon>
+<rect fill="#FAF4E9" height="8" width="3" x="-1" y="-4"></rect>
+<text fill="#0F5257" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="600" x="10" y="2">🌧 Canal detour valid</text>
+</g>
+</g>
+<!-- ROBOT 3: JANU (C·●·9) - STEEL/HALTED RING -->
+<g class="cursor-pointer transition-transform duration-300" id="gameRobotJanu" onclick="focusRobot('Janu')" transform="translate(960, 360)">
+<circle cx="0" cy="0" fill="#C9CCCB" filter="url(#shadowTactileMap)" r="28" stroke="#14110F" stroke-width="2.5"></circle>
+<circle cx="0" cy="0" fill="#14110F" r="20"></circle>
+<text fill="#F2EADB" font-family="'Barlow Condensed', sans-serif" font-size="17" font-weight="800" text-anchor="middle" x="0" y="6">C9</text>
+<rect fill="#F2EADB" height="16" stroke="#14110F" stroke-width="1.2" width="76" x="-38" y="-46"></rect>
+<text fill="#14110F" font-family="'Geist Mono', monospace" font-size="9" font-weight="700" text-anchor="middle" x="0" y="-34">JANU · C·●·9</text>
+<!-- Speech Bubble or Halt Flag -->
+<g id="januSpeechBubbleGroup" transform="translate(36, -32)">
+<rect fill="#FAF4E9" filter="url(#shadowTactileMap)" height="28" stroke="#14110F" stroke-width="1.5" width="148" x="0" y="-16"></rect>
+<polygon fill="#FAF4E9" points="-6,0 0,-5 0,5" stroke="#14110F" stroke-width="1.5"></polygon>
+<rect fill="#FAF4E9" height="8" width="3" x="-1" y="-4"></rect>
+<text fill="#D7261E" font-family="'Geist Mono', monospace" font-size="9.5" font-weight="600" id="januBubbleText" x="10" y="2">🛑 Zone R-2 Halt Flag</text>
+</g>
+</g>
+</g>
+</svg>
+</div>
+<!-- ===================================================================== -->
+<!-- 2. AUTHENTIC TOPBAR & BRAND LOCKUP (EXACT MATCH TO LANDING PAGE)     -->
+<!-- ===================================================================== -->
+<header class="fixed top-0 left-0 right-0 z-50 px-5 sm:px-8 py-2.5 flex items-center justify-between border-b border-kaali-ink/15 bg-chai-paper/90 backdrop-blur-[4px]">
+<!-- Left: Authentic 4-Tier Tiffin SVG Mark + Heavy Condensed Brand Lockup -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2.5">
+<!-- 4-tier steel tiffin stack SVG with top curved handle -->
+<svg class="w-5 h-6 text-kaali-ink shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 28">
+<path d="M12 2 C8 2 8 5 8 5 L16 5 C16 5 16 2 12 2 Z"></path>
+<rect height="4" rx="1" width="14" x="5" y="6"></rect>
+<rect height="4" rx="1" width="14" x="5" y="11"></rect>
+<rect height="4" rx="1" width="14" x="5" y="16"></rect>
+<rect height="5" rx="1" width="14" x="5" y="21"></rect>
+<line stroke-dasharray="1 1" x1="19" x2="19" y1="6" y2="25"></line>
+<line stroke-dasharray="1 1" x1="5" x2="5" y1="6" y2="25"></line>
+</svg>
+<div class="flex flex-col leading-none">
+<span class="font-condensed font-extrabold uppercase tracking-[0.08em] text-base text-kaali-ink">DABBAWALA PROTOCOL</span>
+<span class="font-marathi text-[10px] text-kaali-ink/70 tracking-wide mt-0.5 leading-none">मुंबईचे डबेवाले · स्वायत्त यंत्रणा</span>
+</div>
+</div>
+<!-- Divider -->
+<div class="hidden md:block w-px h-6 bg-ledger-line mx-2"></div>
+<!-- Minimal Elegant Level Indicator Pill -->
+<button class="flex items-center gap-2 px-2.5 py-1 border border-kaali-ink/30 bg-paper-tint/90 hover:border-kaali-ink hover:bg-paper-shade transition-colors cursor-pointer group" onclick="openLevelSelect()" title="Switch Dispatch Station Level">
+<span class="font-condensed font-extrabold text-[11px] tracking-widest uppercase text-best-red bg-best-red/10 px-1 py-0.2" id="hudLevelNum">LEVEL 05</span>
+<span class="font-display-serif text-sm text-kaali-ink italic font-normal" id="hudLevelName">Budget exhausted</span>
+<span class="material-symbols-outlined text-[13px] text-kaali-ink/60 group-hover:translate-y-0.5 transition-transform">expand_more</span>
+</button>
+</div>
+<!-- Center: Hairline Scene Switcher Segment Control -->
+<div class="hidden lg:flex items-center bg-paper-tint/90 border border-kaali-ink/30 p-0.5 font-condensed font-bold text-xs uppercase tracking-wider">
+<button class="px-2.5 py-1 hover:bg-chai-paper hover:text-kaali-ink text-kaali-ink transition-colors" onclick="triggerMode('board')">BOARD</button>
+<span class="text-kaali-ink/20">|</span>
+<button class="px-2.5 py-1 hover:bg-chai-paper hover:text-kaali-ink text-kaali-ink/75 transition-colors" onclick="triggerMode('intro')">INTRO</button>
+<span class="text-kaali-ink/20">|</span>
+<button class="px-2.5 py-1 hover:bg-peeli-yellow text-kaali-ink font-extrabold transition-colors" onclick="triggerMode('humangate')">GATE</button>
+<span class="text-kaali-ink/20">|</span>
+<button class="px-2.5 py-1 hover:bg-best-red hover:text-chai-paper text-kaali-ink/75 transition-colors" onclick="triggerMode('verdict')">VERDICT</button>
+<span class="text-kaali-ink/20">|</span>
+<button class="px-2.5 py-1 hover:bg-kaali-ink hover:text-chai-paper text-kaali-ink/75 transition-colors" onclick="triggerMode('safestop')">SAFE-STOP</button>
+<span class="text-kaali-ink/20">|</span>
+<button class="px-2.5 py-1 bg-kaali-ink/5 hover:bg-peeli-yellow text-kaali-ink font-bold transition-colors" onclick="openReceiptDrawer()">RECEIPT</button>
+</div>
+<!-- Right: Status Indicators + Edmondson Ticket Badge (Landing Page aligned) -->
+<div class="flex items-center gap-3">
+<!-- Live Network Indicator -->
+<div class="hidden sm:flex items-center gap-1.5 font-mono text-[11px] text-kaali-ink/75 pr-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="tracking-wider uppercase">NET: Sepoliaeth</span>
+</div>
+<!-- 0G Active Toggle Lever Pill -->
+<button class="flex items-center gap-1.5 px-2.5 py-1 border border-kaali-ink/30 bg-paper-tint/90 hover:border-kaali-ink font-mono text-[10px] cursor-pointer transition-colors" id="hud0GLever" onclick="toggle0GSignalLever()" title="Toggle 0G Galileo consensus heartbeat">
+<span class="w-2 h-2 rounded-full bg-signal-green inline-block" id="hud0GDot"></span>
+<span class="font-bold tracking-wider" id="hud0GStatusText">0G ACTIVE</span>
+</button>
+<!-- Authentic Edmondson Railway Season Pass Button (Peeli Yellow + 2px border + Hard Shadow) -->
+<button class="bg-peeli-yellow text-kaali-ink font-condensed font-extrabold uppercase text-xs tracking-wider px-3.5 py-1.5 border-[1.5px] sm:border-2 border-kaali-ink btn-hard-shadow flex items-center gap-1.5 cursor-pointer" onclick="openSeasonPass()" title="View Edmondson Railway Season Pass">
+<span class="material-symbols-outlined text-[15px]">confirmation_number</span>
+<span class="">PASS 7/20</span>
+</button>
+</div>
+</header>
+<!-- ===================================================================== -->
+<!-- 3. FLOATING BOTTOM DOCK & FLEET INDICATORS (RESTYLED PER THEME)      -->
+<!-- ===================================================================== -->
+<!-- BOTTOM-LEFT: THREE CRISP TIFFIN-BOT BADGES WITH LIVE STATUS TAGS -->
+<div class="fixed bottom-5 left-5 z-30 flex items-center gap-1.5 bg-paper-tint/95 border border-kaali-ink p-1.5 shadow-tactile-sm backdrop-blur-xs">
+<!-- Robot A7: Ramu (Yellow Accent Ring) -->
+<div class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-chai-paper transition-colors group" onclick="focusRobot('Ramu')" title="Inspect Ramu (A·●·7)">
+<div class="relative w-6 h-6 border-2 border-kaali-ink bg-peeli-yellow flex items-center justify-center font-condensed font-black text-xs text-kaali-ink shadow-xs">
+      A7
+      <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-signal-green border border-kaali-ink"></span>
+</div>
+<div class="flex flex-col leading-none">
+<span class="font-condensed font-bold text-[11px] uppercase tracking-wider text-kaali-ink">RAMU</span>
+<span class="font-mono text-[7.5px] text-signal-green font-semibold mt-0.5">ACTIVE</span>
+</div>
+</div>
+<div class="w-px h-5 bg-ledger-line"></div>
+<!-- Robot B2: Sakhu (Teal Accent Ring) -->
+<div class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-chai-paper transition-colors group" onclick="focusRobot('Sakhu')" title="Inspect Sakhu (B·●·2)">
+<div class="relative w-6 h-6 border-2 border-kaali-ink bg-marine-teal text-chai-paper flex items-center justify-center font-condensed font-black text-xs shadow-xs">
+      B2
+      <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-peeli-yellow border border-kaali-ink"></span>
+</div>
+<div class="flex flex-col leading-none">
+<span class="font-condensed font-bold text-[11px] uppercase tracking-wider text-kaali-ink">SAKHU</span>
+<span class="font-mono text-[7.5px] text-marine-teal font-semibold mt-0.5">DETOUR</span>
+</div>
+</div>
+<div class="w-px h-5 bg-ledger-line"></div>
+<!-- Robot C9: Janu (Crimson / Steel Halted Ring) -->
+<div class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-chai-paper transition-colors group" onclick="focusRobot('Janu')" title="Inspect Janu (C·●·9)">
+<div class="relative w-6 h-6 border-2 border-kaali-ink bg-tiffin-steel text-kaali-ink flex items-center justify-center font-condensed font-black text-xs shadow-xs">
+      C9
+      <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-best-red border border-kaali-ink" id="januStatusDot"></span>
+</div>
+<div class="flex flex-col leading-none">
+<span class="font-condensed font-bold text-[11px] uppercase tracking-wider text-kaali-ink">JANU</span>
+<span class="font-mono text-[7.5px] text-best-red font-semibold mt-0.5" id="januStatusLabel">HALTED</span>
+</div>
+</div>
+</div>
+<!-- BOTTOM-CENTER: PRIMARY ACTION DOCK (LANDING PAGE BUTTON TREATMENTS) -->
+<div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5">
+<!-- Secondary Button: The Line -->
+<button class="bg-[#FFF8EF] text-kaali-ink border-[1.5px] border-kaali-ink px-4 py-2 font-condensed font-extrabold text-xs uppercase tracking-wider btn-hard-shadow flex items-center gap-1.5 cursor-pointer hover:bg-paper-shade" onclick="openLevelSelect()">
+<span class="material-symbols-outlined text-[15px]">alt_route</span>
+<span class="">The Line</span>
+</button>
+<!-- Primary CTA Button: Dispatch (Play) in Peeli Yellow + Hard Offset Drop Shadow -->
+<button class="bg-peeli-yellow text-kaali-ink border-2 border-kaali-ink px-6 py-2.5 font-condensed font-black text-sm uppercase tracking-widest btn-hard-shadow flex items-center gap-2 cursor-pointer" id="dockPlayBtn" onclick="handlePlayClick()">
+<span class="material-symbols-outlined text-[17px]" id="dockPlayIcon">play_arrow</span>
+<span id="dockPlayText" class="">DISPATCH (PLAY)</span>
+</button>
+<!-- Secondary Button: Surprise Me -->
+<button class="bg-[#FFF8EF] text-kaali-ink border-[1.5px] border-kaali-ink px-4 py-2 font-condensed font-extrabold text-xs uppercase tracking-wider btn-hard-shadow flex items-center gap-1.5 cursor-pointer hover:bg-paper-shade" onclick="surpriseMeScenario()">
+<span class="material-symbols-outlined text-[15px]">casino</span>
+<span class="">Surprise Me</span>
+</button>
+</div>
+<!-- BOTTOM-RIGHT: MINIMAL HAIRLINE ZOOM CONTROLS -->
+<div class="fixed bottom-5 right-5 z-30 flex items-center gap-0.5 bg-paper-tint/95 border border-kaali-ink p-1 shadow-tactile-sm backdrop-blur-xs">
+<button class="w-6 h-6 flex items-center justify-center border border-ledger-line hover:bg-chai-paper hover:border-kaali-ink font-mono font-bold text-xs transition-colors cursor-pointer" onclick="gameZoom(1)" title="Zoom In">+</button>
+<button class="w-6 h-6 flex items-center justify-center border border-ledger-line hover:bg-chai-paper hover:border-kaali-ink font-mono font-bold text-xs transition-colors cursor-pointer" onclick="gameZoom(-1)" title="Zoom Out">-</button>
+<button class="w-6 h-6 flex items-center justify-center border border-ledger-line hover:bg-chai-paper hover:border-kaali-ink text-kaali-ink transition-colors cursor-pointer" onclick="gameRecenter()" title="Recenter Board">
+<span class="material-symbols-outlined text-[13px]">crop_free</span>
+</button>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 4. INTERACTIVE OVERLAYS & MODALS                                          -->
+<!-- ========================================================================= -->
+<!-- MODAL 1: THE LINE (LEVEL SELECT FULL-SCREEN VINTAGE RAIL OVERLAY) -->
+<div class="hidden fixed inset-0 z-50 bg-kaali-ink/80 flex items-center justify-center p-4 backdrop-blur-xs" id="modalTheLine">
+<div class="bg-chai-paper border-2 border-kaali-ink w-full max-w-4xl max-h-[90vh] flex flex-col shadow-tactile relative overflow-hidden">
+<!-- Header -->
+<div class="p-4 border-b border-kaali-ink bg-paper-shade flex items-center justify-between">
+<div>
+<div class="font-marathi text-xs text-kaali-ink/60">मुंबई रेल्वे मार्गिका · संपूर्ण २० स्थानके</div>
+<h2 class="font-display-serif text-2xl font-bold uppercase tracking-wide text-kaali-ink">The Line — 20 Dispatch Scenarios</h2>
+</div>
+<button class="w-8 h-8 border border-kaali-ink bg-chai-paper flex items-center justify-center font-mono font-bold text-sm hover:bg-best-red hover:text-chai-paper transition-colors" onclick="closeModal('modalTheLine')">✕</button>
+</div>
+<!-- Content: 6 Chapters Snaking Through Mumbai Railway Grid -->
+<div class="flex-1 overflow-y-auto p-5 space-y-6 text-xs font-sans" id="theLineChaptersGrid">
+<!-- Chapter 1: Happy Path -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-signal-green">Chapter I · Happy Path</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(01 - 03)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors relative" onclick="selectAndCloseLevel('TC-01')">
+<span class="absolute top-2 right-2 font-mono text-[8px] bg-signal-green text-chai-paper px-1 py-0.2 font-bold">CLEARED ✓</span>
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 01</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Clean delivery</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Standard Western Line cycle</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors relative" onclick="selectAndCloseLevel('TC-02')">
+<span class="absolute top-2 right-2 font-mono text-[8px] bg-signal-green text-chai-paper px-1 py-0.2 font-bold">CLEARED ✓</span>
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 02</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Flooded lane reroute</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Auto-detour around SV Road</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors relative" onclick="selectAndCloseLevel('TC-03')">
+<span class="absolute top-2 right-2 font-mono text-[8px] bg-signal-green text-chai-paper px-1 py-0.2 font-bold">CLEARED ✓</span>
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 03</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Three robots in parallel</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Concurrent manifest locks</div>
+</div>
+</div>
+</div>
+<!-- Chapter 2: Spending Limits -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-peeli-yellow text-kaali-ink">Chapter II · Micropayments &amp; Spending</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(04 - 07)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-04')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 04</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Over per-request cap</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Relay charge exceeds limit</div>
+</div>
+<div class="border-2 border-best-red bg-peeli-yellow/20 p-2.5 shadow-tactile-sm cursor-pointer relative" onclick="selectAndCloseLevel('TC-05')">
+<span class="absolute top-2 right-2 font-mono text-[8px] bg-best-red text-chai-paper px-1 py-0.2 font-bold">CURRENT</span>
+<div class="font-mono text-[10px] text-best-red font-bold">LVL 05</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Budget exhausted</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Zero gas mid-transit refusal</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-06')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 06</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Replayed header</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Nonce reuse blocked</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-07')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 07</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Facilitator failover</div>
+<div class="font-mono text-[9px] text-kaali-ink/70 mt-1 truncate">Secondary gateway seamless</div>
+</div>
+</div>
+</div>
+<!-- Chapter 3: Identity & Cryptography -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-kaali-ink">Chapter III · Key Validation &amp; Access</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(08 - 11)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-08')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 08</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Safety halts Janu</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-09')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 09</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Robot edits status</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-10')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 10</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Cross-robot edit</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-11')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 11</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">ENS unreadable</div>
+</div>
+</div>
+</div>
+<!-- Chapter 4: Human Gate Sign-off -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-best-red">Chapter IV · Human Gate Mandate</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(12 - 15)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+<div class="border border-kaali-ink bg-peeli-yellow/10 p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow transition-colors" onclick="selectAndCloseLevel('TC-12')">
+<div class="font-mono text-[10px] text-best-red font-bold">LVL 12</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Restricted zone approved</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-13')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 13</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Zone R-2 denied</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-14')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 14</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Approval expired</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-15')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 15</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Approver unauthorized</div>
+</div>
+</div>
+</div>
+<!-- Chapter 5: 0G Galileo & Consensus -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-marine-teal">Chapter V · 0G Galileo DA</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(16 - 19)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-16')">
+<div class="font-mono text-[10px] text-best-red font-bold">LVL 16</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">0G timeout safe-stop</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-17')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 17</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">0G key revoked</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-18')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 18</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Out-of-set action</div>
+</div>
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-19')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 19</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Recovery after outage</div>
+</div>
+</div>
+</div>
+<!-- Chapter 6: Replay -->
+<div>
+<div class="flex items-center gap-2 mb-2 pb-1 border-b border-ledger-line">
+<span class="font-condensed font-bold text-sm uppercase text-kaali-ink">Chapter VI · Ledger Replay</span>
+<span class="font-mono text-[9px] text-kaali-ink/50">(20)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+<div class="border border-kaali-ink bg-paper-tint p-2.5 shadow-tactile-sm cursor-pointer hover:bg-peeli-yellow/20 transition-colors" onclick="selectAndCloseLevel('TC-20')">
+<div class="font-mono text-[10px] text-kaali-ink/50">LVL 20</div>
+<div class="font-bold text-sm text-kaali-ink mt-0.5">Replay historical run</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 bg-paper-shade border-t border-kaali-ink flex items-center justify-between font-mono text-[10px]">
+<span class="">Click any station to dispatch immediately.</span>
+<span class="font-bold text-signal-green">PASS COMPLETED: 7 / 20 STATIONS</span>
+</div>
+</div>
+</div>
+<!-- MODAL 2: LEVEL INTRO + "CALL IT" (BOTTOM SHEET MODAL) -->
+<div class="hidden fixed inset-0 z-50 bg-kaali-ink/60 flex items-end justify-center p-0 md:p-6 backdrop-blur-xs" id="modalLevelIntro">
+<div class="bg-chai-paper border-t-2 md:border-2 border-kaali-ink w-full max-w-2xl shadow-tactile p-6 space-y-5">
+<div class="flex items-start justify-between pb-3 border-b border-kaali-ink">
+<div>
+<div class="font-mono text-[10px] font-bold text-best-red uppercase tracking-wider">Operational Mission · Level 05</div>
+<h3 class="font-display-serif text-3xl font-bold text-kaali-ink" id="introModalTitle">Budget Exhausted</h3>
+</div>
+<button class="font-mono text-sm px-2 py-1 border border-kaali-ink hover:bg-best-red hover:text-chai-paper" onclick="closeModal('modalLevelIntro')">✕</button>
+</div>
+<!-- What it proves card -->
+<div class="bg-paper-tint border border-ledger-line p-3 font-mono text-xs text-kaali-ink/85 space-y-1.5">
+<div class="text-[9px] uppercase tracking-wider text-kaali-ink/50 font-bold">WHAT THIS PROVES</div>
+<p class="leading-relaxed" id="introModalProves">Robot runs out of prepaid gas/token balance mid-transit; relay rejects route handover without valid x402 payment header.</p>
+</div>
+<!-- Robot task speech callouts -->
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-paper-shade/60 border border-ledger-line p-2.5 font-mono text-[11px]">
+<div class="font-bold text-kaali-ink">Ramu (A·●·7) Status:</div>
+<div class="text-kaali-ink/75 mt-0.5">"Balance: 0.000 HBAR. Approaching Dadar gate..."</div>
+</div>
+<div class="bg-paper-shade/60 border border-ledger-line p-2.5 font-mono text-[11px]">
+<div class="font-bold text-kaali-ink">Hedera x402 Relay:</div>
+<div class="text-kaali-ink/75 mt-0.5">"Missing micropayment authorization header."</div>
+</div>
+</div>
+<!-- Stationmaster Prediction "Call It" Section -->
+<div class="space-y-2 pt-1 border-t border-ledger-line">
+<div class="font-condensed font-bold text-xs uppercase tracking-wider text-kaali-ink">Stationmaster's Prediction — Call It:</div>
+<div class="grid grid-cols-3 gap-2.5">
+<button class="call-it-btn py-2 px-1 border border-kaali-ink bg-paper-tint font-condensed font-bold text-xs uppercase hover:bg-chai-paper shadow-tactile-sm transition-all" id="predBtnDelivers" onclick="selectCallItPrediction('delivers')">
+          1. Delivers
+        </button>
+<button class="call-it-btn py-2 px-1 border border-kaali-ink bg-paper-tint font-condensed font-bold text-xs uppercase hover:bg-chai-paper shadow-tactile-sm transition-all" id="predBtnReroutes" onclick="selectCallItPrediction('reroutes')">
+          2. Reroutes
+        </button>
+<button class="call-it-btn py-2 px-1 border-2 border-best-red bg-peeli-yellow/20 font-condensed font-bold text-xs uppercase shadow-tactile-sm transition-all" id="predBtnStopped" onclick="selectCallItPrediction('stopped')">
+          3. Gets Stopped
+        </button>
+</div>
+</div>
+<!-- Lock It In Primary Button -->
+<div class="flex items-center justify-between pt-2">
+<span class="font-mono text-[10px] text-kaali-ink/60">Prediction accuracy earns Season Pass punch</span>
+<button class="bg-peeli-yellow border-2 border-kaali-ink px-6 py-2.5 font-condensed font-extrabold text-sm uppercase tracking-wider btn-hard-shadow flex items-center gap-2 cursor-pointer" onclick="lockInPredictionAndRun()">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span class="">Lock It In &amp; Run</span>
+</button>
+</div>
+</div>
+</div>
+<!-- MODAL 3: HUMAN GATE (LEVEL 12 GATE DESK OVERLAY) -->
+<div class="hidden fixed inset-0 z-50 bg-kaali-ink/75 flex items-center justify-center p-4 backdrop-blur-xs" id="modalHumanGate">
+<div class="bg-chai-paper border-2 border-kaali-ink w-full max-w-lg shadow-tactile p-6 space-y-4 relative overflow-hidden">
+<!-- Top Archival Header -->
+<div class="flex items-center justify-between pb-3 border-b-2 border-kaali-ink">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-best-red text-2xl">gavel</span>
+<div>
+<div class="font-condensed font-bold text-xs uppercase text-best-red tracking-wider">Security Checkpoint Desk</div>
+<h3 class="font-display-serif text-2xl font-bold text-kaali-ink">Zone R-2 Perimeter Entry</h3>
+</div>
+</div>
+<!-- 60s Countdown Timer Ring -->
+<div class="w-12 h-12 rounded-full border-2 border-best-red bg-paper-tint flex flex-col items-center justify-center shadow-tactile-sm">
+<span class="font-mono font-bold text-xs text-best-red" id="gateCountdownDisplay">52s</span>
+<span class="font-mono text-[6.5px] uppercase text-kaali-ink/60">LEFT</span>
+</div>
+</div>
+<!-- Robot details in dock perimeter -->
+<div class="bg-paper-tint border border-kaali-ink p-3 space-y-1 font-mono text-xs">
+<div class="flex justify-between"><span class="">ROBOT UNIT:</span> <span class="font-bold">JANU (C·●·9)</span></div>
+<div class="flex justify-between"><span class="">CARRIER ENS:</span> <span class="font-bold">janu.dabbawala.eth</span></div>
+<div class="flex justify-between text-best-red font-bold"><span class="">SECTOR:</span> <span class="">RESTRICTED ZONE R-2 (Docks)</span></div>
+<div class="flex justify-between text-kaali-ink/70"><span class="">REASON:</span> <span class="">Military dock delivery manifest #994</span></div>
+</div>
+<div class="font-mono text-[10px] text-kaali-ink/70 text-center">
+      Awaiting Stationmaster cryptographically stamped gate decision:
+    </div>
+<!-- Big Tactile APPROVE and DENY Rubber Stamp Buttons -->
+<div class="grid grid-cols-2 gap-4 pt-1">
+<button class="bg-signal-green text-chai-paper border-2 border-kaali-ink py-3 font-condensed font-bold text-base uppercase tracking-wider btn-hard-shadow flex flex-col items-center cursor-pointer" onclick="resolveGateAction(true)">
+<span class="">APPROVE ENTRY</span>
+<span class="font-mono text-[8px] font-normal text-chai-paper/80">Cryptographic Bypass [STAMP]</span>
+</button>
+<button class="bg-best-red text-chai-paper border-2 border-kaali-ink py-3 font-condensed font-bold text-base uppercase tracking-wider btn-hard-shadow flex flex-col items-center cursor-pointer" onclick="resolveGateAction(false)">
+<span class="">DENY / HALT</span>
+<span class="font-mono text-[8px] font-normal text-chai-paper/80">Trigger Safe Turnaround</span>
+</button>
+</div>
+<div class="text-center">
+<button class="font-mono text-[10px] text-kaali-ink/50 underline cursor-pointer" onclick="closeModal('modalHumanGate')">Dismiss without decision</button>
+</div>
+</div>
+</div>
+<!-- MODAL 4: VERDICT OVERLAY (HUGE ROTATED RED RUBBER STAMP) -->
+<div class="hidden fixed inset-0 z-50 bg-kaali-ink/80 flex items-center justify-center p-4 backdrop-blur-xs" id="modalVerdictOverlay">
+<div class="bg-chai-paper border-2 border-kaali-ink w-full max-w-xl shadow-tactile p-6 relative overflow-hidden text-center space-y-5">
+<!-- GIANT SLAMMED RUBBER STAMP -->
+<div class="my-2 inline-block border-4 border-best-red px-8 py-2 transform -rotate-6 shadow-tactile bg-chai-paper/95">
+<span class="font-display-serif text-5xl md:text-6xl font-bold tracking-widest text-best-red uppercase" id="verdictStampText">REFUSED</span>
+</div>
+<!-- Outcome Pill: "You called it +100" -->
+<div class="inline-flex items-center gap-2 bg-signal-green text-chai-paper px-4 py-1.5 font-condensed font-bold text-sm tracking-widest uppercase shadow-tactile-sm">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+<span class="">You Called It! +100 Stationmaster XP</span>
+</div>
+<!-- Perforated Season Pass Dropping with Newly Punched Hole -->
+<div class="bg-paper-shade border border-kaali-ink p-3 mx-4 text-left font-mono text-[11px] relative shadow-tactile-sm space-y-1">
+<div class="flex justify-between items-center pb-1 border-b border-ledger-line">
+<span class="font-bold">EDMONDSON TICKET #849,204</span>
+<span class="text-[9px] text-signal-green font-bold">HOLE PUNCHED ●</span>
+</div>
+<div class="text-kaali-ink/80">Station 05 Checkpoint Cleared: x402 Micropayment Invariant Preserved.</div>
+<div class="text-[9px] text-kaali-ink/50">Block Proof: 0x402_EXHAUSTED_TX_4920 · Hedera Network</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+<button class="bg-[#FFF8EF] border border-kaali-ink px-4 py-2 font-condensed font-extrabold text-xs uppercase tracking-wider btn-hard-shadow cursor-pointer" onclick="openReceiptDrawer(); closeModal('modalVerdictOverlay')">
+        View Receipt
+      </button>
+<button class="bg-peeli-yellow text-kaali-ink border-2 border-kaali-ink px-5 py-2 font-condensed font-extrabold text-xs uppercase tracking-wider btn-hard-shadow cursor-pointer" onclick="nextLevel()">
+        Next Level →
+      </button>
+<button class="bg-[#FFF8EF] border border-kaali-ink px-4 py-2 font-condensed font-extrabold text-xs uppercase tracking-wider btn-hard-shadow cursor-pointer" onclick="surpriseMeScenario(); closeModal('modalVerdictOverlay')">
+        Surprise Me
+      </button>
+</div>
+</div>
+</div>
+<!-- MODAL 5: EDMONDSON RAILWAY SEASON PASS (AUTHENTIC 20-PUNCH TICKET) -->
+<div class="hidden fixed inset-0 z-50 bg-kaali-ink/75 flex items-center justify-center p-4 backdrop-blur-xs" id="modalSeasonPass">
+<div class="bg-paper-shade border-2 border-kaali-ink w-full max-w-lg shadow-tactile p-6 space-y-4 relative overflow-hidden">
+<!-- Header of Edmondson Ticket -->
+<div class="border-b-2 border-kaali-ink pb-2.5 flex items-start justify-between">
+<div>
+<div class="font-marathi text-[11px] text-kaali-ink/60">ग्रेट इंडियन पेनिनसुला रेल्वे · मासिक पास</div>
+<div class="font-display-serif text-2xl font-bold uppercase tracking-wide text-kaali-ink">BOMBAY CENTRAL DISPATCH PASS</div>
+<div class="font-mono text-[9px] text-kaali-ink/60 tracking-widest mt-0.5">NO. 0942-B · VALID VIA WESTERN &amp; CENTRAL CORRIDORS</div>
+</div>
+<button class="w-7 h-7 border border-kaali-ink bg-chai-paper flex items-center justify-center font-mono font-bold text-xs hover:bg-best-red hover:text-chai-paper cursor-pointer" onclick="closeModal('modalSeasonPass')">✕</button>
+</div>
+<!-- 20 Physical Punch Holes (1 to 20 with cutouts) -->
+<div class="bg-chai-paper border border-kaali-ink p-3 space-y-1.5 shadow-tactile-sm">
+<div class="flex justify-between font-mono text-[9px] uppercase tracking-wider text-kaali-ink/60">
+<span class="">20 PROTOCOL STATIONS</span>
+<span class="font-bold text-signal-green">7 CLEARED (PUNCHED)</span>
+</div>
+<div class="grid grid-cols-5 gap-2 pt-1" id="seasonPassGrid">
+<!-- Punched Holes (1 - 7) -->
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">01</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">02</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">03</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">04</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">05</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">06</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<div class="border border-kaali-ink bg-paper-shade p-1.5 text-center font-mono text-[10px] relative">
+<span class="text-[8px] opacity-60">07</span>
+<div class="w-4 h-4 mx-auto rounded-full bg-kaali-ink my-0.5"></div>
+<span class="text-[7px] text-signal-green font-bold">PUNCHED</span>
+</div>
+<!-- Open Unpunched Holes (8 - 20) -->
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">08</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">09</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">10</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">11</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">12</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">13</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">14</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+<div class="border border-ledger-line bg-paper-tint p-1.5 text-center font-mono text-[10px]">
+<span class="text-[8px] opacity-40">15</span>
+<div class="w-4 h-4 mx-auto rounded-full border border-dashed border-kaali-ink/40 my-0.5"></div>
+<span class="text-[7px] text-kaali-ink/40">OPEN</span>
+</div>
+</div>
+</div>
+<!-- 4 Protocol Partner Badges with Progress Meters -->
+<div class="grid grid-cols-2 gap-2 text-xs font-mono">
+<!-- ENS -->
+<div class="border border-ledger-line bg-chai-paper p-2 space-y-1">
+<div class="flex justify-between font-bold"><span class="">ENS IDENTITY</span> <span class="">100%</span></div>
+<div class="w-full h-1 bg-paper-shade"><div class="h-full bg-signal-green" style="width: 100%;"></div></div>
+</div>
+<!-- Hedera -->
+<div class="border border-ledger-line bg-chai-paper p-2 space-y-1">
+<div class="flex justify-between font-bold"><span class="">HEDERA x402</span> <span class="">80%</span></div>
+<div class="w-full h-1 bg-paper-shade"><div class="h-full bg-peeli-yellow" style="width: 80%;"></div></div>
+</div>
+<!-- 0G Galileo -->
+<div class="border border-ledger-line bg-chai-paper p-2 space-y-1">
+<div class="flex justify-between font-bold"><span class="">0G GALILEO DA</span> <span class="">95%</span></div>
+<div class="w-full h-1 bg-paper-shade"><div class="h-full bg-marine-teal" style="width: 95%;"></div></div>
+</div>
+<!-- Human Gate -->
+<div class="border border-ledger-line bg-chai-paper p-2 space-y-1">
+<div class="flex justify-between font-bold"><span class="">HUMAN GATE</span> <span class="">60%</span></div>
+<div class="w-full h-1 bg-paper-shade"><div class="h-full bg-best-red" style="width: 60%;"></div></div>
+</div>
+</div>
+<!-- Footer: Reset Pass -->
+<div class="pt-2 border-t border-ledger-line flex items-center justify-between font-mono text-[10px]">
+<button class="text-best-red hover:underline cursor-pointer" onclick="resetSeasonPass()">Reset Season Pass Record</button>
+<span class="text-kaali-ink/50">ISSUED BY VT CENTRAL LEDGER</span>
+</div>
+</div>
+</div>
+<!-- MODAL 6: 380PX CRYPTOGRAPHIC RECEIPT DRAWER (SLIDE-OUT RIGHT) -->
+<div class="fixed top-0 right-0 h-full w-[380px] bg-chai-paper border-l-2 border-kaali-ink shadow-tactile z-50 transform translate-x-full transition-transform duration-300 flex flex-col" id="drawerReceipt">
+<!-- Header -->
+<div class="p-4 border-b border-kaali-ink bg-paper-shade flex items-center justify-between">
+<div>
+<div class="font-condensed font-bold text-xs uppercase text-kaali-ink/60">Cryptographic Proof Ledger</div>
+<h3 class="font-display-serif text-xl font-bold text-kaali-ink">5 Checkpoint Receipt</h3>
+</div>
+<button class="w-7 h-7 border border-kaali-ink bg-chai-paper flex items-center justify-center font-mono font-bold text-xs hover:bg-best-red hover:text-chai-paper transition-colors cursor-pointer" onclick="closeReceiptDrawer()">✕</button>
+</div>
+<!-- 5 Cryptographic Checkpoints Content -->
+<div class="flex-1 overflow-y-auto p-4 space-y-3.5 font-mono text-[10.5px]">
+<!-- 1. Passport -->
+<div class="border-l-2 border-signal-green pl-2.5 space-y-0.5">
+<div class="font-bold text-kaali-ink text-[11px]">1. PASSPORT (ENS RESOLUTION)</div>
+<div class="text-kaali-ink/70">Block Height: 7,204,118 · Sepolia</div>
+<div class="text-kaali-ink/60">Entity: ramu.dabbawala.eth</div>
+<div class="bg-paper-shade/80 p-1 text-[8.5px] truncate">PubKey: 0x8f3c71a9...5c2b09 [VERIFIED]</div>
+</div>
+<!-- 2. Payment -->
+<div class="border-l-2 border-peeli-yellow pl-2.5 space-y-0.5">
+<div class="font-bold text-kaali-ink text-[11px]">2. x402 PAYMENT CHANNEL</div>
+<div class="text-kaali-ink/70">Network: Hedera Consensus Service</div>
+<div class="text-best-red font-bold">Refusal: 0.002 HBAR required, balance 0.000</div>
+<div class="bg-paper-shade/80 p-1 text-[8.5px] truncate">Header: x402-Hedera-Drain-4920 [REFUSED]</div>
+</div>
+<!-- 3. Decision Matrix -->
+<div class="border-l-2 border-marine-teal pl-2.5 space-y-0.5">
+<div class="font-bold text-kaali-ink text-[11px]">3. 0G DECISION MATRIX</div>
+<div class="text-kaali-ink/70">Model: Galileo-DA-v2 Consensus Engine</div>
+<div class="text-kaali-ink/60">Action: Trigger safe turnaround loop at Dadar</div>
+<div class="bg-paper-shade/80 p-1 text-[8.5px] truncate">RequestID: 0g_req_7f3a9b1c0029e</div>
+</div>
+<!-- 4. Human Gate -->
+<div class="border-l-2 border-kaali-ink/30 pl-2.5 space-y-0.5">
+<div class="font-bold text-kaali-ink text-[11px]">4. HUMAN GATE SIGN-OFF</div>
+<div class="text-kaali-ink/70">Status: Single-use perimeter bypass bypass</div>
+<div class="text-kaali-ink/60">Authority: Dock Master Key #994 [STANDBY]</div>
+</div>
+<!-- 5. Ledger Commit -->
+<div class="border-l-2 border-kaali-ink/30 pl-2.5 space-y-0.5">
+<div class="font-bold text-kaali-ink text-[11px]">5. LEDGER RECORD</div>
+<div class="text-kaali-ink/70">Immutable VT Central Log #849,204</div>
+<div class="bg-paper-shade/80 p-1 text-[8.5px] truncate">0G Root Hash: 0x99a1f04ec90231aa...</div>
+</div>
+</div>
+<!-- Bottom Stamp & Export -->
+<div class="p-3 bg-paper-shade border-t border-kaali-ink font-mono text-[9.5px] flex items-center justify-between">
+<span class="text-kaali-ink/60">STATUS: RECORD ATTESTED</span>
+<button class="px-2.5 py-1 bg-kaali-ink text-chai-paper font-bold hover:bg-kaali-ink/80 cursor-pointer" onclick="alert('Cryptographic proof bundle downloaded.')">Export JSON</button>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 5. EMBEDDED JAVASCRIPT CONSOLE ENGINE                                    -->
+<!-- ========================================================================= -->
+<script>
+  let is0GActiveState = true;
+  let currentLevelId = 'TC-05';
+  let isPlayingSim = false;
+  let mapZoomLevel = 1;
+
+  function openLevelSelect() {
+    document.getElementById('modalTheLine').classList.remove('hidden');
+  }
+  function openSeasonPass() {
+    document.getElementById('modalSeasonPass').classList.remove('hidden');
+  }
+  function openReceiptDrawer() {
+    document.getElementById('drawerReceipt').classList.remove('translate-x-full');
+  }
+  function closeReceiptDrawer() {
+    document.getElementById('drawerReceipt').classList.add('translate-x-full');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  function selectAndCloseLevel(id) {
+    currentLevelId = id;
+    closeModal('modalTheLine');
+    triggerMode('board');
+    const lvlTitles = {
+      'TC-01': 'Clean delivery',
+      'TC-02': 'Flooded lane reroute',
+      'TC-03': 'Three robots in parallel',
+      'TC-04': 'Over cap',
+      'TC-05': 'Budget exhausted',
+      'TC-12': 'Restricted zone approved',
+      'TC-16': '0G timeout safe-stop',
+      'TC-20': 'Replay historical run'
+    };
+    document.getElementById('hudLevelNum').innerText = 'LEVEL ' + id.replace('TC-', '');
+    document.getElementById('hudLevelName').innerText = lvlTitles[id] || 'Budget exhausted';
+  }
+
+  function triggerMode(mode) {
+    // Close other modals
+    ['modalTheLine', 'modalLevelIntro', 'modalHumanGate', 'modalVerdictOverlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
+
+    const vignette = document.getElementById('safeStopVignette');
+    vignette.classList.add('opacity-0');
+
+    if (mode === 'intro') {
+      document.getElementById('modalLevelIntro').classList.remove('hidden');
+    } else if (mode === 'humangate') {
+      document.getElementById('modalHumanGate').classList.remove('hidden');
+    } else if (mode === 'verdict') {
+      document.getElementById('modalVerdictOverlay').classList.remove('hidden');
+    } else if (mode === 'safestop') {
+      set0GState(false);
+      vignette.classList.remove('opacity-0');
+      document.getElementById('januBubbleText').innerText = "Can't reach 0G. Parking.";
+      document.getElementById('januStatusLabel').innerText = 'SAFE-STOP';
+      document.getElementById('hudLevelNum').innerText = 'LEVEL 16';
+      document.getElementById('hudLevelName').innerText = '0G timeout safe-stop';
+    } else if (mode === 'board') {
+      set0GState(true);
+    }
+  }
+
+  function toggle0GSignalLever() {
+    set0GState(!is0GActiveState);
+  }
+
+  function set0GState(active) {
+    is0GActiveState = active;
+    const dot = document.getElementById('hud0GDot');
+    const txt = document.getElementById('hud0GStatusText');
+    const vignette = document.getElementById('safeStopVignette');
+    if (active) {
+      dot.className = 'w-2 h-2 rounded-full bg-signal-green inline-block shadow-sm';
+      txt.innerText = '0G ACTIVE';
+      vignette.classList.add('opacity-0');
+    } else {
+      dot.className = 'w-2 h-2 rounded-full bg-best-red inline-block shadow-sm';
+      txt.innerText = '0G HALTED';
+      vignette.classList.remove('opacity-0');
+    }
+  }
+
+  function handlePlayClick() {
+    isPlayingSim = !isPlayingSim;
+    const icon = document.getElementById('dockPlayIcon');
+    const txt = document.getElementById('dockPlayText');
+    if (isPlayingSim) {
+      icon.innerText = 'pause';
+      txt.innerText = 'DISPATCHED (RUNNING)';
+      document.getElementById('ramuBubbleText').innerText = '🚀 In-transit to Dadar';
+    } else {
+      icon.innerText = 'play_arrow';
+      txt.innerText = 'DISPATCH (PLAY)';
+      document.getElementById('ramuBubbleText').innerText = '⚡ Paying 0.002 HBAR';
+    }
+  }
+
+  function surpriseMeScenario() {
+    const pool = ['TC-01', 'TC-02', 'TC-03', 'TC-04', 'TC-05', 'TC-12', 'TC-16', 'TC-20'];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    selectAndCloseLevel(pick);
+  }
+
+  function selectCallItPrediction(pred) {
+    ['predBtnDelivers', 'predBtnReroutes', 'predBtnStopped'].forEach(b => {
+      document.getElementById(b).className = 'call-it-btn py-2 px-1 border border-kaali-ink bg-paper-tint font-condensed font-bold text-xs uppercase hover:bg-chai-paper shadow-tactile-sm transition-all';
+    });
+    if (pred === 'delivers') document.getElementById('predBtnDelivers').className = 'call-it-btn py-2 px-1 border-2 border-signal-green bg-signal-green/20 font-condensed font-bold text-xs uppercase shadow-tactile-sm';
+    if (pred === 'reroutes') document.getElementById('predBtnReroutes').className = 'call-it-btn py-2 px-1 border-2 border-peeli-yellow bg-peeli-yellow/30 font-condensed font-bold text-xs uppercase shadow-tactile-sm';
+    if (pred === 'stopped') document.getElementById('predBtnStopped').className = 'call-it-btn py-2 px-1 border-2 border-best-red bg-peeli-yellow/20 font-condensed font-bold text-xs uppercase shadow-tactile-sm';
+  }
+
+  function lockInPredictionAndRun() {
+    closeModal('modalLevelIntro');
+    triggerMode('verdict');
+  }
+
+  function nextLevel() {
+    selectAndCloseLevel('TC-06');
+    closeModal('modalVerdictOverlay');
+  }
+
+  function resolveGateAction(approved) {
+    closeModal('modalHumanGate');
+    if (approved) {
+      document.getElementById('verdictStampText').innerText = 'APPROVED';
+      document.getElementById('verdictStampText').className = 'font-display-serif text-5xl md:text-6xl font-bold tracking-widest text-signal-green uppercase';
+    } else {
+      document.getElementById('verdictStampText').innerText = 'DENIED';
+      document.getElementById('verdictStampText').className = 'font-display-serif text-5xl md:text-6xl font-bold tracking-widest text-best-red uppercase';
+    }
+    triggerMode('verdict');
+  }
+
+  function focusRobot(name) {
+    if (name === 'Ramu') {
+      document.getElementById('ramuBubbleText').innerText = '📍 Dadar Interlock Locked';
+    } else if (name === 'Sakhu') {
+      alert('Inspecting Sakhu (B·●·2) route through SV Canal.');
+    } else if (name === 'Janu') {
+      triggerMode('humangate');
+    }
+  }
+
+  function inspectCheckpoint(num) {
+    openReceiptDrawer();
+  }
+
+  function resetSeasonPass() {
+    alert('Season pass holes reset for a fresh Bombay tour.');
+    closeModal('modalSeasonPass');
+  }
+
+  function gameZoom(delta) {
+    mapZoomLevel = Math.max(0.8, Math.min(1.6, mapZoomLevel + delta * 0.15));
+    document.getElementById('boardSvg').style.transform = `scale(${mapZoomLevel})`;
+  }
+
+  function gameRecenter() {
+    mapZoomLevel = 1;
+    document.getElementById('boardSvg').style.transform = 'scale(1)';
+  }
+</script>
+
+
+</body></html>
