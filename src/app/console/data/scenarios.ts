@@ -86,6 +86,20 @@ const CP_GATE: Checkpoint = {
   coordinates: { x: 880, y: 360 },
   status: "pending",
 };
+const CP_RELAY_Ramu: Checkpoint = {
+  id: "cp-relay-ramu",
+  name: "Dadar Relay Handoff (Ramu)",
+  type: "relay",
+  coordinates: { x: 510, y: 590 },
+  status: "pending",
+};
+const CP_RELAY_Sakhu: Checkpoint = {
+  id: "cp-relay-sakhu",
+  name: "Dadar Relay Handoff (Sakhu)",
+  type: "relay",
+  coordinates: { x: 510, y: 590 },
+  status: "pending",
+};
 const CP_RELAY: Checkpoint = {
   id: "cp-relay",
   name: "Dadar Relay Handoff",
@@ -161,10 +175,10 @@ export const SCENARIOS: ScenarioTestCase[] = [
       sakhu: lane("sakhu", ["⏳ Awaiting box", "⇄ Handoff → Janu", "✅ Manifest signed"]),
       janu: lane("janu", ["⏳ Awaiting transfer", "📦 Receiving box", "✅ Manifest signed"]),
     },
-    checkpoints: [CP_RELAY, CP_RELAY, CP_DELIVER],
+    checkpoints: [CP_RELAY_Ramu, CP_RELAY_Sakhu, CP_DELIVER],
     steps: [
-      { checkpointId: "cp-relay", action: { type: "handoff" }, expectedProofs: createProofs("TC-03-ramu") },
-      { checkpointId: "cp-relay", action: { type: "handoff" }, expectedProofs: createProofs("TC-03-sakhu") },
+      { checkpointId: "cp-relay-ramu", action: { type: "handoff" }, expectedProofs: createProofs("TC-03-ramu") },
+      { checkpointId: "cp-relay-sakhu", action: { type: "handoff" }, expectedProofs: createProofs("TC-03-sakhu") },
       { checkpointId: "cp-deliver", action: { type: "continue" }, expectedProofs: createProofs("TC-03-janu") },
     ],
     expectedOutcome: "DELIVERED",

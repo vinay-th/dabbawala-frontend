@@ -10,8 +10,8 @@ import type { GateRequest, RobotId, RobotPassport, ScenarioTestCase } from "../d
 
 const API_BASE_URL =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "")
-    : "http://localhost:3000/v1");
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "").replace(/\/v1$/, "") + "/v1"
+    : "http://localhost:3001/v1");
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
   const controller = new AbortController();
