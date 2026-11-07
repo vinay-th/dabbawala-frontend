@@ -8,9 +8,6 @@ export type RobotId = "ramu" | "sakhu" | "janu";
 export type RobotState = "idle" | "moving" | "checkpoint" | "halted" | "delivered";
 
 export type HaltReason =
-  | "ZG_TIMEOUT"
-  | "ZG_TRANSPORT"
-  | "ZG_MALFORMED"
   | "ACTION_NOT_ALLOWED"
   | "ENS_UNREADABLE"
   | "POLICY_PAUSED"

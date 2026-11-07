@@ -96,7 +96,7 @@ A predefined test case suite demonstrating all protocol invariants:
    * *Flow:* Stationmaster clicks DENY in Gatekeeper modal -> No token issued -> Janu executes safe turnaround.
 
 9. **TC-16: 0G Outage Safe-Stop (No Guessing)**
-   * *Flow:* 0G endpoint goes down (or user toggles 0G Switch) -> Robot fails closed with reason code `ZG_TIMEOUT` -> Halts on nearest safe cell.
+   * *Flow:* 0G endpoint goes down (or user toggles 0G Switch) -> Robot fails closed with the transport halt reason -> Halts on nearest safe cell.
 
 10. **TC-20: Cryptographic Replay & Verification**
     * *Flow:* Downloads episode JSONL log -> Hashes execution steps -> Compares against 0G Galileo `RelayLedger` contract root -> Match confirmed.

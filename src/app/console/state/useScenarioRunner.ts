@@ -88,9 +88,7 @@ const LANE_ORDER: RobotId[] = ["ramu", "sakhu", "janu"];
 const TINYBARS_PER_MICROHBAR = 100;
 
 const HALT_STAMP: Record<string, Verdict> = {
-  ZG_TIMEOUT: "SAFE-STOP",
-  ZG_TRANSPORT: "SAFE-STOP",
-  ZG_MALFORMED: "SAFE-STOP",
+  ACTION_NOT_ALLOWED: "SAFE-STOP",
   OVER_CAP: "REFUSED",
   BUDGET_EXHAUSTED: "REFUSED",
   POLICY_PAUSED: "HALTED",
@@ -209,9 +207,10 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     response: BackendDecision,
     _currentStepIndex: number,
   ): ValidatedDecision {
-    // Null response (network error, timeout, 503, etc.)
+    // Null response (network error, timeout, 503, etc.) -> fail closed, same
+    // mapping the backend haltReasonFor() applies to transport failures.
     if (response === null) {
-      return { approved: false, reason: "ZG_TIMEOUT" };
+      return { approved: false, reason: "ACTION_NOT_ALLOWED" };
     }
 
     // Check for halted state (explicit halted: true)
@@ -231,7 +230,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     }
 
     // Malformed or unrecognized response - fail closed
-    return { approved: false, reason: "ZG_MALFORMED" };
+    return { approved: false, reason: "ACTION_NOT_ALLOWED" };
   }
 
   const advanceStep = useCallback(
@@ -378,7 +377,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
   ): RunnerState {
     if (!action) {
       // No action returned - fail closed
-      const haltReason: HaltReason = "ZG_MALFORMED";
+      const haltReason: HaltReason = "ACTION_NOT_ALLOWED";
       const verdict = stampForHalt(haltReason);
       return {
         ...s,
@@ -420,7 +419,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
         // validated and the run advances deterministically; we do not invent
         // waypoints that were never issued by the backend.
         if (typeof routeId !== "string" || routeId.length === 0) {
-          const haltReason: HaltReason = "ZG_MALFORMED";
+          const haltReason: HaltReason = "ACTION_NOT_ALLOWED";
           const verdict = stampForHalt(haltReason);
           return {
             ...s,
@@ -618,7 +617,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
                 return {
                   ...cur,
                   playing: false,
-                  haltReason: "ZG_TIMEOUT",
+                  haltReason: "ACTION_NOT_ALLOWED",
                   verdict: "SAFE-STOP",
                   haltedRobots: [...new Set([...cur.haltedRobots, scenario.leadRobot])],
                   pendingDecision: false,
@@ -679,7 +678,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
           ...cur,
           playing: false,
           haltedRobots: laneOrder.slice(),
-          haltReason: "ZG_TIMEOUT",
+          haltReason: "ACTION_NOT_ALLOWED",
           verdict: "SAFE-STOP",
           records: rec
             ? cur.records.map((r, i) =>

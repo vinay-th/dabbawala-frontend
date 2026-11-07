@@ -286,18 +286,18 @@ export const SCENARIOS: ScenarioTestCase[] = [
   {
     id: "TC-16",
     title: "0G Outage Safe-Stop (No Guessing)",
-    description: "0G Router goes down mid-run. All robots fail closed with ZG_TIMEOUT and halt on safe cells. No substitute decision is made.",
+    description: "0G Router goes down mid-run. All robots fail closed and halt on safe cells. No substitute decision is made.",
     track: "0G",
     leadRobot: "ramu",
     lanes: {
-      ramu: lane("ramu", ["🛂 ENS policy read", "🛑 ZG_TIMEOUT · parking"]),
-      sakhu: lane("sakhu", ["🌧 Canal scout clear", "🛑 ZG_TIMEOUT · parking"]),
-      janu: lane("janu", ["🛰 R-2 perimeter scan", "🛑 ZG_TIMEOUT · parking"]),
+      ramu: lane("ramu", ["🛂 ENS policy read", "🛑 parking"]),
+      sakhu: lane("sakhu", ["🌧 Canal scout clear", "🛑 parking"]),
+      janu: lane("janu", ["🛰 R-2 perimeter scan", "🛑 parking"]),
     },
     checkpoints: [CP_ENS, CP_PAY],
     steps: [
       { checkpointId: "cp-ens", action: { type: "continue" }, expectedProofs: createProofs("TC-16", "verified") },
-      { checkpointId: "cp-pay", action: { type: "halt", reason: "ZG_TIMEOUT" as HaltReason }, expectedProofs: createProofs("TC-16", "failed") },
+      { checkpointId: "cp-pay", action: { type: "halt", reason: "ACTION_NOT_ALLOWED" as HaltReason }, expectedProofs: createProofs("TC-16", "failed") },
     ],
     expectedOutcome: "HALTED",
   },
