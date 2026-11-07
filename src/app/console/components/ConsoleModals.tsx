@@ -190,12 +190,20 @@ export default function ConsoleModals({ runner, ogUp, reducedMotion, onOpenRecei
             <div className="bg-[#E6DBC3] border border-[#14110F] p-3 mx-2 text-left font-mono text-[11px] shadow-[2px_2px_0_#14110F] space-y-1">
               <div className="flex justify-between pb-1 border-b border-[#14110F]/20">
                 <span className="font-bold">EPISODE {runner.records.length} STEPS RECORDED</span>
-                <span className="text-[9px] text-[#14110F]/60 font-bold">SIMULATED PROOF DATA</span>
+                <span className={`text-[9px] font-bold ${runner.anchor ? "text-[#2E9E5B]" : "text-[#14110F]/60"}`}>
+                  {runner.anchor ? "LIVE ANCHOR · RELAYLEDGER" : "SIMULATED PROOF DATA"}
+                </span>
               </div>
               <div className="text-[#14110F]/80">{STAMP_REASON[verdict]}.</div>
-              <div className="text-[9px] text-[#14110F]/50">
-                Anchor: RelayLedger @ 0G Galileo · root 0x99a1f04ec90231aa… [pending live wiring]
-              </div>
+              {runner.anchor ? (
+                <div className="text-[9px] text-[#14110F]/65 break-all">
+                  Anchor: RelayLedger @ 0G Galileo · contract {runner.anchor.contractAddress} · root {runner.anchor.rootHash} · tx {runner.anchor.anchorTxId}
+                </div>
+              ) : (
+                <div className="text-[9px] text-[#14110F]/50">
+                  Anchor: RelayLedger @ 0G Galileo · root 0x99a1f04ec90231aa… [pending live wiring]
+                </div>
+              )}
             </div>
 
             {/* Actions */}

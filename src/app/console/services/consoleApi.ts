@@ -331,11 +331,22 @@ export async function triggerMissionDecision(
   provenance: { mode: string; recordId: string };
 } | null> {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/mission/decide`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(stateSummary),
-    });
+    // A live 0G Router inference takes seconds (3.9 s observed in a live probe),
+    // and the backend allows ONE retry on failure (invariant §7.4) with a
+    // ZERO_G_REQUEST_TIMEOUT_MS deadline of up to 20 s per attempt. The default
+    // fetchWithTimeout budget (2500 ms) aborts every live decision mid-flight
+    // and turns it into a SAFE-STOP that looks like a 0G outage. Fail-closed
+    // semantics are unchanged: a timeout here still halts with
+    // ACTION_NOT_ALLOWED on the safe cell.
+    const res = await fetchWithTimeout(
+      `${API_BASE_URL}/mission/decide`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(stateSummary),
+      },
+      45_000,
+    );
     if (res.ok) {
       return await res.json();
     }
@@ -345,21 +356,58 @@ export async function triggerMissionDecision(
   return null;
 }
 
-/** POST /v1/evidence/upload -> Upload to 0G Storage */
+export interface EvidenceUploadReceipt {
+  rootHash: string;
+  storageTxId: string;
+  anchorTxId: string;
+  status: string;
+  /** Address of the contracted RelayLedger the root was anchored on. */
+  relayLedgerAddress?: string;
+}
+
+export interface EvidenceUploadFailure {
+  error: string;
+  violations?: readonly string[];
+  details?: string;
+}
+
+/**
+ * POST /v1/evidence/upload -> Upload to 0G Storage + anchor the root on
+ * RelayLedger (0G Galileo). The backend applies the log linter, uploads,
+ * sends the real anchor() transaction and verifies by contract read-back;
+ * it never invents a receipt (fail-closed). source tag reflects the receipt
+ * contract: `complete` only when anchoring verified.
+ */
 export async function uploadEpisodeEvidence(
   episodeId: string,
   robotId: RobotId = "ramu",
   kind: "episode-log" | "provenance" = "episode-log",
   content?: string,
-): Promise<any> {
+): Promise<
+  { ok: true; source: "live"; receipt: EvidenceUploadReceipt } | { ok: false; source: "sim"; failure: EvidenceUploadFailure | null }
+> {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/evidence/upload`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ episodeId, robotId, kind, content }),
-    });
-    return await res.json();
+    // 120 s budget covers the 0G Storage upload (ZERO_G_STORAGE_TIMEOUT_MS
+    // default) plus the RelayLedger anchor tx + read-back round-trip.
+    const res = await fetchWithTimeout(
+      `${API_BASE_URL}/evidence/upload`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episodeId, robotId, kind, content }),
+      },
+      120_000,
+    );
+    if (res.ok) {
+      const body = (await res.json()) as EvidenceUploadReceipt & { error?: string };
+      if (typeof body.rootHash === "string" && body.rootHash.length > 0 && body.status === "complete") {
+        return { ok: true, source: "live", receipt: body };
+      }
+      return { ok: false, source: "sim", failure: { error: "MALFORMED_RECEIPT" } };
+    }
+    const failure = (await res.json()) as EvidenceUploadFailure;
+    return { ok: false, source: "sim", failure };
   } catch {
-    return null;
+    return { ok: false, source: "sim", failure: null };
   }
 }

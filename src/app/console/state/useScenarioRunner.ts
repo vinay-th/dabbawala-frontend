@@ -8,7 +8,7 @@
 // data is SIMULATED demo data until ROADMAP Phase B.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadPassport, submitGateDecision, triggerMissionDecision } from "../services/consoleApi";
+import { loadPassport, submitGateDecision, triggerMissionDecision, uploadEpisodeEvidence } from "../services/consoleApi";
 import type {
   GateRequest,
   HaltReason,
@@ -73,6 +73,16 @@ export type StepRecord = {
   gateDecision: "approved" | "denied" | "expired" | null;
 };
 
+/** Real RelayLedger anchoring receipt (backend POST /v1/evidence/upload). */
+export type EpisodeAnchorReceipt = {
+  rootHash: string;
+  storageTxId: string;
+  /** Real Galileo transaction hash of the RelayLedger.anchor() call. */
+  anchorTxId: string;
+  contractAddress: string;
+  confirmedAtMs: number;
+};
+
 const TICK_MS = 50;
 const BASE_PROGRESS_PER_TICK = 0.012; // 1x -> ~4.2s per leg
 const GATE_TTL_MS = 60_000; // token TTL <= 60s (ROADMAP invariant 7)
@@ -106,6 +116,8 @@ type RunnerState = {
   haltedRobots: RobotId[];
   records: StepRecord[];
   pendingDecision: boolean;
+  /** Live RelayLedger receipt once a completed run is anchored; null until then. */
+  anchor: EpisodeAnchorReceipt | null;
 };
 
 const INITIAL: RunnerState = {
@@ -119,6 +131,7 @@ const INITIAL: RunnerState = {
   haltedRobots: [],
   records: [],
   pendingDecision: false,
+  anchor: null,
 };
 
 function stampForHalt(reason: HaltReason): Verdict {
@@ -690,6 +703,63 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     }
   }, [ogUp, laneOrder]);
 
+  // ── Episode evidence upload + RelayLedger anchor (ROADMAP §4.6, §4.7) ──────
+  // Fires exactly once per completed run (DELIVERED / REROUTED only — a
+  // halted run is never evidence-anchored, invariant §7.4). The backend
+  // lints the JSONL, uploads to 0G Storage, sends the real anchor() tx on
+  // Galileo and verifies by contract read-back. On failure the receipt
+  // stays null and the verdict strip keeps honest "[pending live wiring]".
+  const anchorInFlightRef = useRef<string | null>(null);
+  useEffect(() => {
+    const verdict = state.verdict;
+    const anchorable = verdict === "DELIVERED" || verdict === "REROUTED";
+    if (!anchorable || state.anchor || anchorInFlightRef.current) return;
+
+    const contentLines: string[] = [
+      JSON.stringify({
+        seq: 0,
+        type: "header",
+        schema: "dabbawala.console.episode/v1",
+        scenario: scenario.id,
+        seed: "DABBAWALA_2026_SEED_42",
+        robots: LANE_ORDER,
+        tsMs: Date.now(),
+      }),
+      ...state.records.map((r, i) =>
+        JSON.stringify({ seq: i + 1, type: "decision", robotId: scenario.leadRobot, ...r }),
+      ),
+      JSON.stringify({
+        seq: state.records.length + 1,
+        type: "footer",
+        scenario: scenario.id,
+        tsMs: Date.now(),
+      }),
+    ];
+    const content = contentLines.join("\n");
+    const episodeId = `ep-${scenario.id}-${Date.now()}`;
+    anchorInFlightRef.current = episodeId;
+
+    uploadEpisodeEvidence(episodeId, scenario.leadRobot, "episode-log", content)
+      .then((result) => {
+        if (anchorInFlightRef.current !== episodeId) return; // superseded by reset
+        anchorInFlightRef.current = null;
+        if (!result.ok) return; // fail-closed: keep the static pending label
+        setState((cur) => ({
+          ...cur,
+          anchor: {
+            rootHash: result.receipt.rootHash,
+            storageTxId: result.receipt.storageTxId,
+            anchorTxId: result.receipt.anchorTxId,
+            contractAddress: result.receipt.relayLedgerAddress ?? "",
+            confirmedAtMs: Date.now(),
+          },
+        }));
+      })
+      .catch(() => {
+        if (anchorInFlightRef.current === episodeId) anchorInFlightRef.current = null;
+      });
+  }, [state.verdict, state.anchor, state.records, scenario.id, scenario.leadRobot]);
+
   // Controls -------------------------------------------------------------
   const play = useCallback(() => {
     setState((cur) => {
@@ -828,6 +898,7 @@ export function useScenarioRunner(scenario: ScenarioTestCase, ogUp: boolean) {
     haltReason: state.haltReason,
     haltedRobots: state.haltedRobots,
     records: state.records,
+    anchor: state.anchor,
     robots,
     lanes,
     leadLane: scenario.lanes[scenario.leadRobot],
